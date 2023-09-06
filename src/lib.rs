@@ -59,6 +59,16 @@ impl<'a> From<(&'a str, Value)> for TrackingEvent<'a> {
     }
 }
 
+impl<'a> From<(&'a str, Option<Value>)> for TrackingEvent<'a> {
+    fn from((event, payload): (&'a str, Option<Value>)) -> Self {
+        TrackingEvent {
+            event: event.into(),
+            payload,
+            options: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct User {
     pub id: Option<String>,
