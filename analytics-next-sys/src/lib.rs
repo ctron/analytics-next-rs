@@ -16,7 +16,10 @@ extern "C" {
     pub fn load(this: &AnalyticsBrowser, settings: JsValue, opts: JsValue);
 
     #[wasm_bindgen(method)]
-    pub fn track(this: &AnalyticsBrowser, event: String, properties: JsValue, options: JsValue);
+    pub fn identify(this: &AnalyticsBrowser, user: Option<&str>, traits: JsValue, options: JsValue);
+
+    #[wasm_bindgen(method)]
+    pub fn track(this: &AnalyticsBrowser, event: &str, properties: JsValue, options: JsValue);
 
     #[wasm_bindgen(method)]
     pub fn reset(this: &AnalyticsBrowser);

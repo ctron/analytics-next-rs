@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Clone)]
 pub struct AnalyticsBrowser {
-    instance: Rc<sys::AnalyticsBrowser>,
+    pub instance: Rc<sys::AnalyticsBrowser>,
 }
 
 impl PartialEq for AnalyticsBrowser {
@@ -20,6 +20,25 @@ impl PartialEq for AnalyticsBrowser {
 pub struct Settings {
     #[wasm_bindgen(js_name = "writeKey")]
     pub write_key: String,
+}
+
+pub trait TrackingEvent {
+    fn name(&self) -> &str;
+
+    fn payload(&self) -> Option<Value> {
+        None
+    }
+
+    fn options(&self) -> Option<Value> {
+        None
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct User {
+    pub id: Option<String>,
+    pub traits: Value,
+    pub options: Value,
 }
 
 impl AnalyticsBrowser {
@@ -35,8 +54,31 @@ impl AnalyticsBrowser {
         }
     }
 
+    pub fn identify(&self, user: impl Into<User>) {
+        let user = user.into();
+        let id = user.id.as_deref();
+        let traits = JsValue::from_serde(&user.traits).unwrap_or(JsValue::NULL);
+        let options = JsValue::from_serde(&user.options).unwrap_or(JsValue::NULL);
+
+        self.instance.identify(id, traits, options);
+    }
+
+    pub fn track(&self, event: impl TrackingEvent) {
+        let name = event.name();
+        let properties = event
+            .payload()
+            .and_then(|value| JsValue::from_serde(&value).ok())
+            .unwrap_or(JsValue::UNDEFINED);
+        let options = event
+            .options()
+            .and_then(|value| JsValue::from_serde(&value).ok())
+            .unwrap_or(JsValue::UNDEFINED);
+
+        self.instance.track(name, properties, options);
+    }
+
     #[must_use = "A tracking operation must be completed by calling the TrackBuilder::complete() function"]
-    pub fn track(&self, event: impl Into<String>) -> TrackBuilder<'_> {
+    pub fn build(&self, event: impl Into<String>) -> TrackBuilder<'_> {
         let event = event.into();
         TrackBuilder {
             instance: &self.instance,
@@ -84,7 +126,7 @@ impl<'a> TrackBuilder<'a> {
 
     pub fn complete(self) {
         if let Ok(properties) = JsValue::from_serde(&self.properties) {
-            self.instance.track(self.event, properties, self.options);
+            self.instance.track(&self.event, properties, self.options);
         }
     }
 }

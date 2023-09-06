@@ -20,7 +20,7 @@ pub fn application() -> Html {
         let tracker = tracker.clone();
         use_callback(
             move |_, ()| {
-                tracker.track("Tracked me!").complete();
+                tracker.build("Tracked me!").complete();
             },
             (),
         )
@@ -31,7 +31,7 @@ pub fn application() -> Html {
         use_callback(
             move |_, ()| {
                 tracker
-                    .track("Tracked me!")
+                    .build("Tracked me!")
                     .add_property("Foo", "Bar")
                     .add_property("Number", 42)
                     .add_property("O'rly", true)
