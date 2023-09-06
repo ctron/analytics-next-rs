@@ -1,6 +1,7 @@
 pub use analytics_next_sys as sys;
 use gloo_utils::format::JsValueSerdeExt;
 use serde_json::Value;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -22,15 +23,39 @@ pub struct Settings {
     pub write_key: String,
 }
 
-pub trait TrackingEvent {
-    fn name(&self) -> &str;
+pub struct TrackingEvent<'a> {
+    pub event: Cow<'a, str>,
+    pub payload: Option<Value>,
+    pub options: Option<Value>,
+}
 
-    fn payload(&self) -> Option<Value> {
-        None
+impl<'a> From<&'a str> for TrackingEvent<'a> {
+    fn from(event: &'a str) -> Self {
+        TrackingEvent {
+            event: event.into(),
+            payload: None,
+            options: None,
+        }
     }
+}
 
-    fn options(&self) -> Option<Value> {
-        None
+impl From<String> for TrackingEvent<'static> {
+    fn from(event: String) -> Self {
+        TrackingEvent {
+            event: event.into(),
+            payload: None,
+            options: None,
+        }
+    }
+}
+
+impl<'a> From<(&'a str, Value)> for TrackingEvent<'a> {
+    fn from((event, payload): (&'a str, Value)) -> Self {
+        TrackingEvent {
+            event: event.into(),
+            payload: Some(payload),
+            options: None,
+        }
     }
 }
 
@@ -63,14 +88,16 @@ impl AnalyticsBrowser {
         self.instance.identify(id, traits, options);
     }
 
-    pub fn track(&self, event: impl TrackingEvent) {
-        let name = event.name();
+    pub fn track<'a>(&self, event: impl Into<TrackingEvent<'a>>) {
+        let event = event.into();
+
+        let name = &event.event;
         let properties = event
-            .payload()
+            .payload
             .and_then(|value| JsValue::from_serde(&value).ok())
             .unwrap_or(JsValue::UNDEFINED);
         let options = event
-            .options()
+            .options
             .and_then(|value| JsValue::from_serde(&value).ok())
             .unwrap_or(JsValue::UNDEFINED);
 
