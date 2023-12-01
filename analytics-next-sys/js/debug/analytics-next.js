@@ -449,6 +449,40 @@ getProcessEnv$1.getProcessEnv = getProcessEnv;
 
 var parseCdn = {};
 
+var globalAnalyticsHelper = {};
+
+Object.defineProperty(globalAnalyticsHelper, "__esModule", { value: true });
+globalAnalyticsHelper.setGlobalAnalytics = globalAnalyticsHelper.setGlobalAnalyticsKey = globalAnalyticsHelper.getGlobalAnalytics = void 0;
+/**
+ * Stores the global window analytics key
+ */
+var _globalAnalyticsKey = 'analytics';
+/**
+ * Gets the global analytics/buffer
+ * @param key name of the window property where the buffer is stored (default: analytics)
+ * @returns AnalyticsSnippet
+ */
+function getGlobalAnalytics() {
+    return window[_globalAnalyticsKey];
+}
+globalAnalyticsHelper.getGlobalAnalytics = getGlobalAnalytics;
+/**
+ * Replaces the global window key for the analytics/buffer object
+ * @param key key name
+ */
+function setGlobalAnalyticsKey(key) {
+    _globalAnalyticsKey = key;
+}
+globalAnalyticsHelper.setGlobalAnalyticsKey = setGlobalAnalyticsKey;
+/**
+ * Sets the global analytics object
+ * @param analytics analytics snippet
+ */
+function setGlobalAnalytics(analytics) {
+    window[_globalAnalyticsKey] = analytics;
+}
+globalAnalyticsHelper.setGlobalAnalytics = setGlobalAnalytics;
+
 var embeddedWriteKey$1 = {};
 
 Object.defineProperty(embeddedWriteKey$1, "__esModule", { value: true });
@@ -475,6 +509,7 @@ embeddedWriteKey$1.embeddedWriteKey = embeddedWriteKey;
 (function (exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.getLegacyAJSPath = exports.getNextIntegrationsURL = exports.getCDN = exports.setGlobalCDNUrl = void 0;
+	var global_analytics_helper_1 = globalAnalyticsHelper;
 	var embedded_write_key_1 = embeddedWriteKey$1;
 	var analyticsScriptRegex = /(https:\/\/.*)\/analytics\.js\/v1\/(?:.*?)\/(?:platform|analytics.*)?/;
 	var getCDNUrlFromScriptTag = function () {
@@ -493,12 +528,13 @@ embeddedWriteKey$1.embeddedWriteKey = embeddedWriteKey;
 	var _globalCDN; // set globalCDN as in-memory singleton
 	var getGlobalCDNUrl = function () {
 	    var _a;
-	    var result = _globalCDN !== null && _globalCDN !== void 0 ? _globalCDN : (_a = window.analytics) === null || _a === void 0 ? void 0 : _a._cdn;
+	    var result = _globalCDN !== null && _globalCDN !== void 0 ? _globalCDN : (_a = (0, global_analytics_helper_1.getGlobalAnalytics)()) === null || _a === void 0 ? void 0 : _a._cdn;
 	    return result;
 	};
 	var setGlobalCDNUrl = function (cdn) {
-	    if (window.analytics) {
-	        window.analytics._cdn = cdn;
+	    var globalAnalytics = (0, global_analytics_helper_1.getGlobalAnalytics)();
+	    if (globalAnalytics) {
+	        globalAnalytics._cdn = cdn;
 	    }
 	    _globalCDN = cdn;
 	};
@@ -531,13 +567,13 @@ embeddedWriteKey$1.embeddedWriteKey = embeddedWriteKey;
 	 * @returns the path to Analytics JS 1.0
 	 **/
 	function getLegacyAJSPath() {
-	    var _a, _b;
-	    var writeKey = (_a = (0, embedded_write_key_1.embeddedWriteKey)()) !== null && _a !== void 0 ? _a : window.analytics._writeKey;
+	    var _a, _b, _c;
+	    var writeKey = (_a = (0, embedded_write_key_1.embeddedWriteKey)()) !== null && _a !== void 0 ? _a : (_b = (0, global_analytics_helper_1.getGlobalAnalytics)()) === null || _b === void 0 ? void 0 : _b._writeKey;
 	    var scripts = Array.prototype.slice.call(document.querySelectorAll('script'));
 	    var path = undefined;
 	    for (var _i = 0, scripts_1 = scripts; _i < scripts_1.length; _i++) {
 	        var s = scripts_1[_i];
-	        var src = (_b = s.getAttribute('src')) !== null && _b !== void 0 ? _b : '';
+	        var src = (_c = s.getAttribute('src')) !== null && _c !== void 0 ? _c : '';
 	        var result = analyticsScriptRegex.exec(src);
 	        if (result && result[1]) {
 	            path = src;
@@ -596,8 +632,8 @@ function requireGetGlobal () {
 
 Object.defineProperty(fetch$2, "__esModule", { value: true });
 fetch$2.fetch = void 0;
-var tslib_1$e = require$$0$2;
-var unfetch_1 = tslib_1$e.__importDefault(require$$1);
+var tslib_1$c = require$$0$2;
+var unfetch_1 = tslib_1$c.__importDefault(require$$1);
 var get_global_1$2 = requireGetGlobal();
 /**
  * Wrapper around native `fetch` containing `unfetch` fallback.
@@ -615,68 +651,6 @@ fetch$2.fetch = fetch$1;
 var analytics = {};
 
 var argumentsResolver = {};
-
-/**
- * Event Emitter that takes the expected contract as a generic
- * @example
- * ```ts
- *  type Contract = {
- *    delivery_success: [DeliverySuccessResponse, Metrics],
- *    delivery_failure: [DeliveryError]
- * }
- *  new Emitter<Contract>()
- *  .on('delivery_success', (res, metrics) => ...)
- *  .on('delivery_failure', (err) => ...)
- * ```
- */
-var Emitter = /** @class */ (function () {
-    function Emitter() {
-        this.callbacks = {};
-    }
-    Emitter.prototype.on = function (event, callback) {
-        if (!this.callbacks[event]) {
-            this.callbacks[event] = [callback];
-        }
-        else {
-            this.callbacks[event].push(callback);
-        }
-        return this;
-    };
-    Emitter.prototype.once = function (event, callback) {
-        var _this = this;
-        var on = function () {
-            var args = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i] = arguments[_i];
-            }
-            _this.off(event, on);
-            callback.apply(_this, args);
-        };
-        this.on(event, on);
-        return this;
-    };
-    Emitter.prototype.off = function (event, callback) {
-        var _a;
-        var fns = (_a = this.callbacks[event]) !== null && _a !== void 0 ? _a : [];
-        var without = fns.filter(function (fn) { return fn !== callback; });
-        this.callbacks[event] = without;
-        return this;
-    };
-    Emitter.prototype.emit = function (event) {
-        var _this = this;
-        var _a;
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var callbacks = (_a = this.callbacks[event]) !== null && _a !== void 0 ? _a : [];
-        callbacks.forEach(function (callback) {
-            callback.apply(_this, args);
-        });
-        return this;
-    };
-    return Emitter;
-}());
 
 function dset$1(obj, keys, val) {
 	keys.split && (keys=keys.split('.'));
@@ -954,6 +928,105 @@ function invokeCallback(ctx, callback, delay) {
     })
         .then(function () { return ctx; }));
 }
+
+/**
+ * Return a promise that can be externally resolved
+ */
+var createDeferred = function () {
+    var resolve;
+    var reject;
+    var promise = new Promise(function (_resolve, _reject) {
+        resolve = _resolve;
+        reject = _reject;
+    });
+    return {
+        resolve: resolve,
+        reject: reject,
+        promise: promise,
+    };
+};
+
+/**
+ * Event Emitter that takes the expected contract as a generic
+ * @example
+ * ```ts
+ *  type Contract = {
+ *    delivery_success: [DeliverySuccessResponse, Metrics],
+ *    delivery_failure: [DeliveryError]
+ * }
+ *  new Emitter<Contract>()
+ *  .on('delivery_success', (res, metrics) => ...)
+ *  .on('delivery_failure', (err) => ...)
+ * ```
+ */
+var Emitter = /** @class */ (function () {
+    function Emitter(options) {
+        var _a;
+        this.callbacks = {};
+        this.warned = false;
+        this.maxListeners = (_a = options === null || options === void 0 ? void 0 : options.maxListeners) !== null && _a !== void 0 ? _a : 10;
+    }
+    Emitter.prototype.warnIfPossibleMemoryLeak = function (event) {
+        if (this.warned) {
+            return;
+        }
+        if (this.maxListeners &&
+            this.callbacks[event].length > this.maxListeners) {
+            console.warn("Event Emitter: Possible memory leak detected; ".concat(String(event), " has exceeded ").concat(this.maxListeners, " listeners."));
+            this.warned = true;
+        }
+    };
+    Emitter.prototype.on = function (event, callback) {
+        if (!this.callbacks[event]) {
+            this.callbacks[event] = [callback];
+        }
+        else {
+            this.callbacks[event].push(callback);
+            this.warnIfPossibleMemoryLeak(event);
+        }
+        return this;
+    };
+    Emitter.prototype.once = function (event, callback) {
+        var _this = this;
+        var on = function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            _this.off(event, on);
+            callback.apply(_this, args);
+        };
+        this.on(event, on);
+        return this;
+    };
+    Emitter.prototype.off = function (event, callback) {
+        var _a;
+        var fns = (_a = this.callbacks[event]) !== null && _a !== void 0 ? _a : [];
+        var without = fns.filter(function (fn) { return fn !== callback; });
+        this.callbacks[event] = without;
+        return this;
+    };
+    Emitter.prototype.emit = function (event) {
+        var _this = this;
+        var _a;
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        var callbacks = (_a = this.callbacks[event]) !== null && _a !== void 0 ? _a : [];
+        callbacks.forEach(function (callback) {
+            callback.apply(_this, args);
+        });
+        return this;
+    };
+    return Emitter;
+}());
+
+var esm$1 = /*#__PURE__*/Object.freeze({
+	__proto__: null,
+	Emitter: Emitter,
+	createDeferred: createDeferred
+});
 
 function backoff(params) {
     var random = Math.random() + 1;
@@ -1790,7 +1863,6 @@ var esm = /*#__PURE__*/Object.freeze({
 	CoreEventQueue: CoreEventQueue,
 	CoreLogger: CoreLogger,
 	CoreStats: CoreStats,
-	Emitter: Emitter,
 	EventFactory: EventFactory,
 	NullStats: NullStats,
 	ON_REMOVE_FROM_FUTURE: ON_REMOVE_FROM_FUTURE,
@@ -1890,23 +1962,51 @@ argumentsResolver.resolvePageArguments = resolvePageArguments;
  */
 var resolveUserArguments = function (user) {
     return function () {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c;
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        var id = null;
-        id = (_c = (_a = args.find(analytics_core_1$4.isString)) !== null && _a !== void 0 ? _a : (_b = args.find(analytics_core_1$4.isNumber)) === null || _b === void 0 ? void 0 : _b.toString()) !== null && _c !== void 0 ? _c : user.id();
-        var objects = args.filter(function (obj) {
-            if (id === null) {
-                return (0, analytics_core_1$4.isPlainObject)(obj);
+        var values = {};
+        // It's a stack so it's reversed so that we go through each of the expected arguments
+        var orderStack = [
+            'callback',
+            'options',
+            'traits',
+            'id',
+        ];
+        // Read each argument and eval the possible values here
+        for (var _d = 0, args_1 = args; _d < args_1.length; _d++) {
+            var arg = args_1[_d];
+            var current = orderStack.pop();
+            if (current === 'id') {
+                if ((0, analytics_core_1$4.isString)(arg) || (0, analytics_core_1$4.isNumber)(arg)) {
+                    values.id = arg.toString();
+                    continue;
+                }
+                if (arg === null || arg === undefined) {
+                    continue;
+                }
+                // First argument should always be the id, if it is not a valid value we can skip it
+                current = orderStack.pop();
             }
-            return (0, analytics_core_1$4.isPlainObject)(obj) || obj === null;
-        });
-        var traits = ((_d = objects[0]) !== null && _d !== void 0 ? _d : {});
-        var opts = ((_e = objects[1]) !== null && _e !== void 0 ? _e : {});
-        var resolvedCallback = args.find(analytics_core_1$4.isFunction);
-        return [id, traits, opts, resolvedCallback];
+            // Traits and Options
+            if ((current === 'traits' || current === 'options') &&
+                (arg === null || arg === undefined || (0, analytics_core_1$4.isPlainObject)(arg))) {
+                values[current] = arg;
+            }
+            // Callback
+            if ((0, analytics_core_1$4.isFunction)(arg)) {
+                values.callback = arg;
+                break; // This is always the last argument
+            }
+        }
+        return [
+            (_a = values.id) !== null && _a !== void 0 ? _a : user.id(),
+            ((_b = values.traits) !== null && _b !== void 0 ? _b : {}),
+            (_c = values.options) !== null && _c !== void 0 ? _c : {},
+            values.callback,
+        ];
     };
 };
 argumentsResolver.resolveUserArguments = resolveUserArguments;
@@ -1975,927 +2075,29 @@ var version = {};
 Object.defineProperty(version, "__esModule", { value: true });
 version.version = void 0;
 // This file is generated.
-version.version = '1.53.4';
+version.version = '1.62.0';
 
-var normalize = {};
+var versionType = {};
 
-var js_cookie = {exports: {}};
+var hasRequiredVersionType;
 
-/*! js-cookie v3.0.1 | MIT */
-
-var hasRequiredJs_cookie;
-
-function requireJs_cookie () {
-	if (hasRequiredJs_cookie) return js_cookie.exports;
-	hasRequiredJs_cookie = 1;
-	(function (module, exports) {
-		(function (global, factory) {
-		  module.exports = factory() ;
-		}(commonjsGlobal, (function () {
-		  /* eslint-disable no-var */
-		  function assign (target) {
-		    for (var i = 1; i < arguments.length; i++) {
-		      var source = arguments[i];
-		      for (var key in source) {
-		        target[key] = source[key];
-		      }
-		    }
-		    return target
-		  }
-		  /* eslint-enable no-var */
-
-		  /* eslint-disable no-var */
-		  var defaultConverter = {
-		    read: function (value) {
-		      if (value[0] === '"') {
-		        value = value.slice(1, -1);
-		      }
-		      return value.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent)
-		    },
-		    write: function (value) {
-		      return encodeURIComponent(value).replace(
-		        /%(2[346BF]|3[AC-F]|40|5[BDE]|60|7[BCD])/g,
-		        decodeURIComponent
-		      )
-		    }
-		  };
-		  /* eslint-enable no-var */
-
-		  /* eslint-disable no-var */
-
-		  function init (converter, defaultAttributes) {
-		    function set (key, value, attributes) {
-		      if (typeof document === 'undefined') {
-		        return
-		      }
-
-		      attributes = assign({}, defaultAttributes, attributes);
-
-		      if (typeof attributes.expires === 'number') {
-		        attributes.expires = new Date(Date.now() + attributes.expires * 864e5);
-		      }
-		      if (attributes.expires) {
-		        attributes.expires = attributes.expires.toUTCString();
-		      }
-
-		      key = encodeURIComponent(key)
-		        .replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent)
-		        .replace(/[()]/g, escape);
-
-		      var stringifiedAttributes = '';
-		      for (var attributeName in attributes) {
-		        if (!attributes[attributeName]) {
-		          continue
-		        }
-
-		        stringifiedAttributes += '; ' + attributeName;
-
-		        if (attributes[attributeName] === true) {
-		          continue
-		        }
-
-		        // Considers RFC 6265 section 5.2:
-		        // ...
-		        // 3.  If the remaining unparsed-attributes contains a %x3B (";")
-		        //     character:
-		        // Consume the characters of the unparsed-attributes up to,
-		        // not including, the first %x3B (";") character.
-		        // ...
-		        stringifiedAttributes += '=' + attributes[attributeName].split(';')[0];
-		      }
-
-		      return (document.cookie =
-		        key + '=' + converter.write(value, key) + stringifiedAttributes)
-		    }
-
-		    function get (key) {
-		      if (typeof document === 'undefined' || (arguments.length && !key)) {
-		        return
-		      }
-
-		      // To prevent the for loop in the first place assign an empty array
-		      // in case there are no cookies at all.
-		      var cookies = document.cookie ? document.cookie.split('; ') : [];
-		      var jar = {};
-		      for (var i = 0; i < cookies.length; i++) {
-		        var parts = cookies[i].split('=');
-		        var value = parts.slice(1).join('=');
-
-		        try {
-		          var foundKey = decodeURIComponent(parts[0]);
-		          jar[foundKey] = converter.read(value, foundKey);
-
-		          if (key === foundKey) {
-		            break
-		          }
-		        } catch (e) {}
-		      }
-
-		      return key ? jar[key] : jar
-		    }
-
-		    return Object.create(
-		      {
-		        set: set,
-		        get: get,
-		        remove: function (key, attributes) {
-		          set(
-		            key,
-		            '',
-		            assign({}, attributes, {
-		              expires: -1
-		            })
-		          );
-		        },
-		        withAttributes: function (attributes) {
-		          return init(this.converter, assign({}, this.attributes, attributes))
-		        },
-		        withConverter: function (converter) {
-		          return init(assign({}, this.converter, converter), this.attributes)
-		        }
-		      },
-		      {
-		        attributes: { value: Object.freeze(defaultAttributes) },
-		        converter: { value: Object.freeze(converter) }
-		      }
-		    )
-		  }
-
-		  var api = init(defaultConverter, { path: '/' });
-		  /* eslint-enable no-var */
-
-		  return api;
-
-		}))); 
-	} (js_cookie));
-	return js_cookie.exports;
-}
-
-var gracefulDecodeURIComponent = {};
-
-var hasRequiredGracefulDecodeURIComponent;
-
-function requireGracefulDecodeURIComponent () {
-	if (hasRequiredGracefulDecodeURIComponent) return gracefulDecodeURIComponent;
-	hasRequiredGracefulDecodeURIComponent = 1;
-	Object.defineProperty(gracefulDecodeURIComponent, "__esModule", { value: true });
-	gracefulDecodeURIComponent.gracefulDecodeURIComponent = void 0;
-	/**
-	 * Tries to gets the unencoded version of an encoded component of a
-	 * Uniform Resource Identifier (URI). If input string is malformed,
-	 * returns it back as-is.
-	 *
-	 * Note: All occurences of the `+` character become ` ` (spaces).
-	 **/
-	function gracefulDecodeURIComponent$1(encodedURIComponent) {
-	    try {
-	        return decodeURIComponent(encodedURIComponent.replace(/\+/g, ' '));
-	    }
-	    catch (_a) {
-	        return encodedURIComponent;
-	    }
-	}
-	gracefulDecodeURIComponent.gracefulDecodeURIComponent = gracefulDecodeURIComponent$1;
-	
-	return gracefulDecodeURIComponent;
-}
-
-var tld = {};
-
-var hasRequiredTld;
-
-function requireTld () {
-	if (hasRequiredTld) return tld;
-	hasRequiredTld = 1;
-	Object.defineProperty(tld, "__esModule", { value: true });
-	tld.tld = void 0;
-	var tslib_1 = require$$0$2;
-	var js_cookie_1 = tslib_1.__importDefault(requireJs_cookie());
-	/**
-	 * Levels returns all levels of the given url.
-	 *
-	 * @param {string} url
-	 * @return {Array}
-	 * @api public
-	 */
-	function levels(url) {
-	    var host = url.hostname;
-	    var parts = host.split('.');
-	    var last = parts[parts.length - 1];
-	    var levels = [];
-	    // Ip address.
-	    if (parts.length === 4 && parseInt(last, 10) > 0) {
-	        return levels;
-	    }
-	    // Localhost.
-	    if (parts.length <= 1) {
-	        return levels;
-	    }
-	    // Create levels.
-	    for (var i = parts.length - 2; i >= 0; --i) {
-	        levels.push(parts.slice(i).join('.'));
-	    }
-	    return levels;
-	}
-	function parseUrl(url) {
-	    try {
-	        return new URL(url);
-	    }
-	    catch (_a) {
-	        return;
-	    }
-	}
-	function tld$1(url) {
-	    var parsedUrl = parseUrl(url);
-	    if (!parsedUrl)
-	        return;
-	    var lvls = levels(parsedUrl);
-	    // Lookup the real top level one.
-	    for (var i = 0; i < lvls.length; ++i) {
-	        var cname = '__tld__';
-	        var domain = lvls[i];
-	        var opts = { domain: '.' + domain };
-	        try {
-	            // cookie access throw an error if the library is ran inside a sandboxed environment (e.g. sandboxed iframe)
-	            js_cookie_1.default.set(cname, '1', opts);
-	            if (js_cookie_1.default.get(cname)) {
-	                js_cookie_1.default.remove(cname, opts);
-	                return domain;
-	            }
-	        }
-	        catch (_) {
-	            return;
-	        }
-	    }
-	}
-	tld.tld = tld$1;
-	
-	return tld;
-}
-
-var user = {};
-
-var dist$3 = {};
-
-var IDX=256, HEX=[], BUFFER;
-while (IDX--) HEX[IDX] = (IDX + 256).toString(16).substring(1);
-
-function v4() {
-	var i=0, num, out='';
-
-	if (!BUFFER || ((IDX + 16) > 256)) {
-		BUFFER = Array(i=256);
-		while (i--) BUFFER[i] = 256 * Math.random() | 0;
-		i = IDX = 0;
-	}
-
-	for (; i < 16; i++) {
-		num = BUFFER[IDX + i];
-		if (i==6) out += HEX[num & 15 | 64];
-		else if (i==8) out += HEX[num & 63 | 128];
-		else out += HEX[num];
-
-		if (i & 1 && i > 1 && i < 11) out += '-';
-	}
-
-	IDX++;
-	return out;
-}
-
-dist$3.v4 = v4;
-
-var bindAll = {};
-
-var hasRequiredBindAll;
-
-function requireBindAll () {
-	if (hasRequiredBindAll) return bindAll;
-	hasRequiredBindAll = 1;
-	Object.defineProperty(bindAll, "__esModule", { value: true });
-	function bindAll$1(obj) {
-	    var proto = obj.constructor.prototype;
-	    for (var _i = 0, _a = Object.getOwnPropertyNames(proto); _i < _a.length; _i++) {
-	        var key = _a[_i];
-	        if (key !== 'constructor') {
-	            var desc = Object.getOwnPropertyDescriptor(obj.constructor.prototype, key);
-	            if (!!desc && typeof desc.value === 'function') {
-	                obj[key] = obj[key].bind(obj);
-	            }
-	        }
-	    }
-	    return obj;
-	}
-	bindAll.default = bindAll$1;
-	
-	return bindAll;
-}
-
-Object.defineProperty(user, "__esModule", { value: true });
-user.Group = user.User = user.getAvailableStorageOptions = user.UniversalStorage = user.LocalStorage = user.Cookie = void 0;
-var tslib_1$d = require$$0$2;
-var uuid_1 = dist$3;
-var js_cookie_1 = tslib_1$d.__importDefault(requireJs_cookie());
-var tld_1 = requireTld();
-var bind_all_1$1 = tslib_1$d.__importDefault(requireBindAll());
-var defaults = {
-    persist: true,
-    cookie: {
-        key: 'ajs_user_id',
-        oldKey: 'ajs_user',
-    },
-    localStorage: {
-        key: 'ajs_user_traits',
-    },
-};
-var Store = /** @class */ (function () {
-    function Store() {
-        this.cache = {};
-    }
-    Store.prototype.get = function (key) {
-        return this.cache[key];
-    };
-    Store.prototype.set = function (key, value) {
-        this.cache[key] = value;
-    };
-    Store.prototype.remove = function (key) {
-        delete this.cache[key];
-    };
-    Object.defineProperty(Store.prototype, "type", {
-        get: function () {
-            return 'memory';
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return Store;
-}());
-var ONE_YEAR = 365;
-var Cookie = /** @class */ (function (_super) {
-    tslib_1$d.__extends(Cookie, _super);
-    function Cookie(options) {
-        if (options === void 0) { options = Cookie.defaults; }
-        var _this = _super.call(this) || this;
-        _this.options = tslib_1$d.__assign(tslib_1$d.__assign({}, Cookie.defaults), options);
-        return _this;
-    }
-    Cookie.available = function () {
-        try {
-            var PROBE_COOKIE = 'ajs_cookies_check';
-            js_cookie_1.default.set(PROBE_COOKIE, 'test');
-            var cookieEnabled = document.cookie.includes(PROBE_COOKIE);
-            js_cookie_1.default.remove(PROBE_COOKIE);
-            return cookieEnabled;
-        }
-        catch (error) {
-            return false;
-        }
-    };
-    Object.defineProperty(Cookie, "defaults", {
-        get: function () {
-            return {
-                maxage: ONE_YEAR,
-                domain: (0, tld_1.tld)(window.location.href),
-                path: '/',
-                sameSite: 'Lax',
-            };
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Cookie.prototype.opts = function () {
-        return {
-            sameSite: this.options.sameSite,
-            expires: this.options.maxage,
-            domain: this.options.domain,
-            path: this.options.path,
-            secure: this.options.secure,
-        };
-    };
-    Cookie.prototype.get = function (key) {
-        try {
-            var value = js_cookie_1.default.get(key);
-            if (!value) {
-                return null;
-            }
-            try {
-                return JSON.parse(value);
-            }
-            catch (e) {
-                return value;
-            }
-        }
-        catch (e) {
-            return null;
-        }
-    };
-    Cookie.prototype.set = function (key, value) {
-        if (typeof value === 'string') {
-            js_cookie_1.default.set(key, value, this.opts());
-        }
-        else if (value === null) {
-            js_cookie_1.default.remove(key, this.opts());
-        }
-        else {
-            js_cookie_1.default.set(key, JSON.stringify(value), this.opts());
-        }
-    };
-    Cookie.prototype.remove = function (key) {
-        return js_cookie_1.default.remove(key, this.opts());
-    };
-    Object.defineProperty(Cookie.prototype, "type", {
-        get: function () {
-            return 'cookie';
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return Cookie;
-}(Store));
-user.Cookie = Cookie;
-var localStorageWarning = function (key, state) {
-    console.warn("Unable to access ".concat(key, ", localStorage may be ").concat(state));
-};
-var LocalStorage = /** @class */ (function (_super) {
-    tslib_1$d.__extends(LocalStorage, _super);
-    function LocalStorage() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    LocalStorage.available = function () {
-        var test = 'test';
-        try {
-            localStorage.setItem(test, test);
-            localStorage.removeItem(test);
-            return true;
-        }
-        catch (e) {
-            return false;
-        }
-    };
-    LocalStorage.prototype.get = function (key) {
-        try {
-            var val = localStorage.getItem(key);
-            if (val === null) {
-                return null;
-            }
-            try {
-                return JSON.parse(val);
-            }
-            catch (e) {
-                return val;
-            }
-        }
-        catch (err) {
-            localStorageWarning(key, 'unavailable');
-            return null;
-        }
-    };
-    LocalStorage.prototype.set = function (key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-        }
-        catch (_a) {
-            localStorageWarning(key, 'full');
-        }
-    };
-    LocalStorage.prototype.remove = function (key) {
-        try {
-            return localStorage.removeItem(key);
-        }
-        catch (err) {
-            localStorageWarning(key, 'unavailable');
-        }
-    };
-    Object.defineProperty(LocalStorage.prototype, "type", {
-        get: function () {
-            return 'localStorage';
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return LocalStorage;
-}(Store));
-user.LocalStorage = LocalStorage;
-var UniversalStorage = /** @class */ (function () {
-    function UniversalStorage(stores, storageOptions) {
-        this.storageOptions = storageOptions;
-        this.enabledStores = stores;
-    }
-    UniversalStorage.prototype.getStores = function (storeTypes) {
-        var _this = this;
-        var stores = [];
-        this.enabledStores
-            .filter(function (i) { return !storeTypes || (storeTypes === null || storeTypes === void 0 ? void 0 : storeTypes.includes(i)); })
-            .forEach(function (storeType) {
-            var storage = _this.storageOptions[storeType];
-            if (storage !== undefined) {
-                stores.push(storage);
-            }
-        });
-        return stores;
-    };
-    /*
-      This is to support few scenarios where:
-      - value exist in one of the stores ( as a result of other stores being cleared from browser ) and we want to resync them
-      - read values in AJS 1.0 format ( for customers after 1.0 --> 2.0 migration ) and then re-write them in AJS 2.0 format
-    */
-    /**
-     * get value for the key from the stores. it will pick the first value found in the stores, and then sync the value to all the stores
-     * if the found value is a number, it will be converted to a string. this is to support legacy behavior that existed in AJS 1.0
-     * @param key key for the value to be retrieved
-     * @param storeTypes optional array of store types to be used for performing get and sync
-     * @returns value for the key or null if not found
-     */
-    UniversalStorage.prototype.getAndSync = function (key, storeTypes) {
-        var val = this.get(key, storeTypes);
-        // legacy behavior, getAndSync can change the type of a value from number to string (AJS 1.0 stores numerical values as a number)
-        var coercedValue = (typeof val === 'number' ? val.toString() : val);
-        this.set(key, coercedValue, storeTypes);
-        return coercedValue;
-    };
-    /**
-     * get value for the key from the stores. it will return the first value found in the stores
-     * @param key key for the value to be retrieved
-     * @param storeTypes optional array of store types to be used for retrieving the value
-     * @returns value for the key or null if not found
-     */
-    UniversalStorage.prototype.get = function (key, storeTypes) {
-        var val = null;
-        for (var _i = 0, _a = this.getStores(storeTypes); _i < _a.length; _i++) {
-            var store = _a[_i];
-            val = store.get(key);
-            if (val) {
-                return val;
-            }
-        }
-        return null;
-    };
-    /**
-     * it will set the value for the key in all the stores
-     * @param key key for the value to be stored
-     * @param value value to be stored
-     * @param storeTypes optional array of store types to be used for storing the value
-     * @returns value that was stored
-     */
-    UniversalStorage.prototype.set = function (key, value, storeTypes) {
-        for (var _i = 0, _a = this.getStores(storeTypes); _i < _a.length; _i++) {
-            var store = _a[_i];
-            store.set(key, value);
-        }
-    };
-    /**
-     * remove the value for the key from all the stores
-     * @param key key for the value to be removed
-     * @param storeTypes optional array of store types to be used for removing the value
-     */
-    UniversalStorage.prototype.clear = function (key, storeTypes) {
-        for (var _i = 0, _a = this.getStores(storeTypes); _i < _a.length; _i++) {
-            var store = _a[_i];
-            store.remove(key);
-        }
-    };
-    return UniversalStorage;
-}());
-user.UniversalStorage = UniversalStorage;
-function getAvailableStorageOptions(cookieOptions) {
-    return {
-        cookie: Cookie.available() ? new Cookie(cookieOptions) : undefined,
-        localStorage: LocalStorage.available() ? new LocalStorage() : undefined,
-        memory: new Store(),
-    };
-}
-user.getAvailableStorageOptions = getAvailableStorageOptions;
-var User = /** @class */ (function () {
-    function User(options, cookieOptions) {
-        if (options === void 0) { options = defaults; }
-        var _this = this;
-        var _a, _b, _c, _d;
-        this.options = {};
-        this.id = function (id) {
-            if (_this.options.disable) {
-                return null;
-            }
-            var prevId = _this.identityStore.getAndSync(_this.idKey);
-            if (id !== undefined) {
-                _this.identityStore.set(_this.idKey, id);
-                var changingIdentity = id !== prevId && prevId !== null && id !== null;
-                if (changingIdentity) {
-                    _this.anonymousId(null);
-                }
-            }
-            var retId = _this.identityStore.getAndSync(_this.idKey);
-            if (retId)
-                return retId;
-            var retLeg = _this.legacyUserStore.get(defaults.cookie.oldKey);
-            return retLeg ? (typeof retLeg === 'object' ? retLeg.id : retLeg) : null;
-        };
-        this.anonymousId = function (id) {
-            var _a, _b;
-            if (_this.options.disable) {
-                return null;
-            }
-            if (id === undefined) {
-                var val = (_a = _this.identityStore.getAndSync(_this.anonKey)) !== null && _a !== void 0 ? _a : (_b = _this.legacySIO()) === null || _b === void 0 ? void 0 : _b[0];
-                if (val) {
-                    return val;
-                }
-            }
-            if (id === null) {
-                _this.identityStore.set(_this.anonKey, null);
-                return _this.identityStore.getAndSync(_this.anonKey);
-            }
-            _this.identityStore.set(_this.anonKey, id !== null && id !== void 0 ? id : (0, uuid_1.v4)());
-            return _this.identityStore.getAndSync(_this.anonKey);
-        };
-        this.traits = function (traits) {
-            var _a;
-            if (_this.options.disable) {
-                return;
-            }
-            if (traits === null) {
-                traits = {};
-            }
-            if (traits) {
-                _this.traitsStore.set(_this.traitsKey, traits !== null && traits !== void 0 ? traits : {});
-            }
-            return (_a = _this.traitsStore.get(_this.traitsKey)) !== null && _a !== void 0 ? _a : {};
-        };
-        this.options = options;
-        this.cookieOptions = cookieOptions;
-        this.idKey = (_b = (_a = options.cookie) === null || _a === void 0 ? void 0 : _a.key) !== null && _b !== void 0 ? _b : defaults.cookie.key;
-        this.traitsKey = (_d = (_c = options.localStorage) === null || _c === void 0 ? void 0 : _c.key) !== null && _d !== void 0 ? _d : defaults.localStorage.key;
-        this.anonKey = 'ajs_anonymous_id';
-        var isDisabled = options.disable === true;
-        var shouldPersist = options.persist !== false;
-        var defaultStorageTargets = isDisabled
-            ? []
-            : shouldPersist
-                ? ['localStorage', 'cookie', 'memory']
-                : ['memory'];
-        var storageOptions = getAvailableStorageOptions(cookieOptions);
-        if (options.localStorageFallbackDisabled) {
-            defaultStorageTargets = defaultStorageTargets.filter(function (t) { return t !== 'localStorage'; });
-        }
-        this.identityStore = new UniversalStorage(defaultStorageTargets, storageOptions);
-        // using only cookies for legacy user store
-        this.legacyUserStore = new UniversalStorage(defaultStorageTargets.filter(function (t) { return t !== 'localStorage' && t !== 'memory'; }), storageOptions);
-        // using only localStorage / memory for traits store
-        this.traitsStore = new UniversalStorage(defaultStorageTargets.filter(function (t) { return t !== 'cookie'; }), storageOptions);
-        var legacyUser = this.legacyUserStore.get(defaults.cookie.oldKey);
-        if (legacyUser && typeof legacyUser === 'object') {
-            legacyUser.id && this.id(legacyUser.id);
-            legacyUser.traits && this.traits(legacyUser.traits);
-        }
-        (0, bind_all_1$1.default)(this);
-    }
-    User.prototype.legacySIO = function () {
-        var val = this.legacyUserStore.get('_sio');
-        if (!val) {
-            return null;
-        }
-        var _a = val.split('----'), anon = _a[0], user = _a[1];
-        return [anon, user];
-    };
-    User.prototype.identify = function (id, traits) {
-        if (this.options.disable) {
-            return;
-        }
-        traits = traits !== null && traits !== void 0 ? traits : {};
-        var currentId = this.id();
-        if (currentId === null || currentId === id) {
-            traits = tslib_1$d.__assign(tslib_1$d.__assign({}, this.traits()), traits);
-        }
-        if (id) {
-            this.id(id);
-        }
-        this.traits(traits);
-    };
-    User.prototype.logout = function () {
-        this.anonymousId(null);
-        this.id(null);
-        this.traits({});
-    };
-    User.prototype.reset = function () {
-        this.logout();
-        this.identityStore.clear(this.idKey);
-        this.identityStore.clear(this.anonKey);
-        this.traitsStore.clear(this.traitsKey);
-    };
-    User.prototype.load = function () {
-        return new User(this.options, this.cookieOptions);
-    };
-    User.prototype.save = function () {
-        return true;
-    };
-    User.defaults = defaults;
-    return User;
-}());
-user.User = User;
-var groupDefaults = {
-    persist: true,
-    cookie: {
-        key: 'ajs_group_id',
-    },
-    localStorage: {
-        key: 'ajs_group_properties',
-    },
-};
-var Group = /** @class */ (function (_super) {
-    tslib_1$d.__extends(Group, _super);
-    function Group(options, cookie) {
-        if (options === void 0) { options = groupDefaults; }
-        var _this = _super.call(this, options, cookie) || this;
-        _this.anonymousId = function (_id) {
-            return undefined;
-        };
-        (0, bind_all_1$1.default)(_this);
-        return _this;
-    }
-    return Group;
-}(User));
-user.Group = Group;
-
-var hasRequiredNormalize;
-
-function requireNormalize () {
-	if (hasRequiredNormalize) return normalize;
-	hasRequiredNormalize = 1;
-	Object.defineProperty(normalize, "__esModule", { value: true });
-	normalize.normalize = normalize.utm = normalize.ampId = normalize.getVersionType = normalize.setVersionType = void 0;
-	var tslib_1 = require$$0$2;
-	var js_cookie_1 = tslib_1.__importDefault(requireJs_cookie());
-	var gracefulDecodeURIComponent_1 = requireGracefulDecodeURIComponent();
-	var tld_1 = requireTld();
-	var version_1 = version;
-	var user_1 = user;
-	var cookieOptions;
-	function getCookieOptions() {
-	    if (cookieOptions) {
-	        return cookieOptions;
-	    }
-	    var domain = (0, tld_1.tld)(window.location.href);
-	    cookieOptions = {
-	        expires: 31536000000,
-	        secure: false,
-	        path: '/',
-	    };
-	    if (domain) {
-	        cookieOptions.domain = domain;
-	    }
-	    return cookieOptions;
-	}
+function requireVersionType () {
+	if (hasRequiredVersionType) return versionType;
+	hasRequiredVersionType = 1;
+	Object.defineProperty(versionType, "__esModule", { value: true });
+	versionType.getVersionType = versionType.setVersionType = void 0;
 	// Default value will be updated to 'web' in `bundle-umd.ts` for web build.
 	var _version = 'npm';
 	function setVersionType(version) {
 	    _version = version;
 	}
-	normalize.setVersionType = setVersionType;
+	versionType.setVersionType = setVersionType;
 	function getVersionType() {
 	    return _version;
 	}
-	normalize.getVersionType = getVersionType;
-	function ampId() {
-	    var ampId = js_cookie_1.default.get('_ga');
-	    if (ampId && ampId.startsWith('amp')) {
-	        return ampId;
-	    }
-	}
-	normalize.ampId = ampId;
-	function utm(query) {
-	    if (query.startsWith('?')) {
-	        query = query.substring(1);
-	    }
-	    query = query.replace(/\?/g, '&');
-	    return query.split('&').reduce(function (acc, str) {
-	        var _a = str.split('='), k = _a[0], _b = _a[1], v = _b === void 0 ? '' : _b;
-	        if (k.includes('utm_') && k.length > 4) {
-	            var utmParam = k.substr(4);
-	            if (utmParam === 'campaign') {
-	                utmParam = 'name';
-	            }
-	            acc[utmParam] = (0, gracefulDecodeURIComponent_1.gracefulDecodeURIComponent)(v);
-	        }
-	        return acc;
-	    }, {});
-	}
-	normalize.utm = utm;
-	function ads(query) {
-	    var queryIds = {
-	        btid: 'dataxu',
-	        urid: 'millennial-media',
-	    };
-	    if (query.startsWith('?')) {
-	        query = query.substring(1);
-	    }
-	    query = query.replace(/\?/g, '&');
-	    var parts = query.split('&');
-	    for (var _i = 0, parts_1 = parts; _i < parts_1.length; _i++) {
-	        var part = parts_1[_i];
-	        var _a = part.split('='), k = _a[0], v = _a[1];
-	        if (queryIds[k]) {
-	            return {
-	                id: v,
-	                type: queryIds[k],
-	            };
-	        }
-	    }
-	}
-	function referrerId(query, ctx, disablePersistance) {
-	    var storage = new user_1.UniversalStorage(disablePersistance ? [] : ['cookie'], (0, user_1.getAvailableStorageOptions)(getCookieOptions()));
-	    var stored = storage.get('s:context.referrer');
-	    var ad = ads(query);
-	    ad = ad !== null && ad !== void 0 ? ad : stored;
-	    if (!ad) {
-	        return;
-	    }
-	    if (ctx) {
-	        ctx.referrer = tslib_1.__assign(tslib_1.__assign({}, ctx.referrer), ad);
-	    }
-	    storage.set('s:context.referrer', ad);
-	}
-	function normalize$1(analytics, json, settings, integrations) {
-	    var _a, _b, _c, _d, _e, _f;
-	    var user = analytics.user();
-	    // context should always exist here (see page enrichment)? ... and why would we default to json.options? todo: delete this
-	    json.context = (_b = (_a = json.context) !== null && _a !== void 0 ? _a : json.options) !== null && _b !== void 0 ? _b : {};
-	    var ctx = json.context;
-	    // This guard against missing ctx.page should not be neccessary, since context.page is always defined
-	    var query = typeof ((_c = ctx.page) === null || _c === void 0 ? void 0 : _c.search) === 'string' ? (_d = ctx.page) === null || _d === void 0 ? void 0 : _d.search : '';
-	    delete json.options;
-	    json.writeKey = settings === null || settings === void 0 ? void 0 : settings.apiKey;
-	    ctx.userAgent = navigator.userAgent;
-	    // @ts-ignore
-	    var locale = navigator.userLanguage || navigator.language;
-	    if (typeof ctx.locale === 'undefined' && typeof locale !== 'undefined') {
-	        ctx.locale = locale;
-	    }
-	    if (!ctx.library) {
-	        var type = getVersionType();
-	        if (type === 'web') {
-	            ctx.library = {
-	                name: 'analytics.js',
-	                version: "next-".concat(version_1.version),
-	            };
-	        }
-	        else {
-	            ctx.library = {
-	                name: 'analytics.js',
-	                version: "npm:next-".concat(version_1.version),
-	            };
-	        }
-	    }
-	    if (query && !ctx.campaign) {
-	        ctx.campaign = utm(query);
-	    }
-	    referrerId(query, ctx, (_e = analytics.options.disableClientPersistence) !== null && _e !== void 0 ? _e : false);
-	    json.userId = json.userId || user.id();
-	    json.anonymousId = json.anonymousId || user.anonymousId();
-	    json.sentAt = new Date();
-	    var failed = analytics.queue.failedInitializations || [];
-	    if (failed.length > 0) {
-	        json._metadata = { failedInitializations: failed };
-	    }
-	    var bundled = [];
-	    var unbundled = [];
-	    for (var key in integrations) {
-	        var integration = integrations[key];
-	        if (key === 'Segment.io') {
-	            bundled.push(key);
-	        }
-	        if (integration.bundlingStatus === 'bundled') {
-	            bundled.push(key);
-	        }
-	        if (integration.bundlingStatus === 'unbundled') {
-	            unbundled.push(key);
-	        }
-	    }
-	    // This will make sure that the disabled cloud mode destinations will be
-	    // included in the unbundled list.
-	    for (var _i = 0, _g = (settings === null || settings === void 0 ? void 0 : settings.unbundledIntegrations) || []; _i < _g.length; _i++) {
-	        var settingsUnbundled = _g[_i];
-	        if (!unbundled.includes(settingsUnbundled)) {
-	            unbundled.push(settingsUnbundled);
-	        }
-	    }
-	    var configIds = (_f = settings === null || settings === void 0 ? void 0 : settings.maybeBundledConfigIds) !== null && _f !== void 0 ? _f : {};
-	    var bundledConfigIds = [];
-	    bundled.sort().forEach(function (name) {
-	        var _a;
-	        ((_a = configIds[name]) !== null && _a !== void 0 ? _a : []).forEach(function (id) {
-	            bundledConfigIds.push(id);
-	        });
-	    });
-	    if ((settings === null || settings === void 0 ? void 0 : settings.addBundledMetadata) !== false) {
-	        json._metadata = tslib_1.__assign(tslib_1.__assign({}, json._metadata), { bundled: bundled.sort(), unbundled: unbundled.sort(), bundledIds: bundledConfigIds });
-	    }
-	    var amp = ampId();
-	    if (amp) {
-	        ctx.amp = { id: amp };
-	    }
-	    return json;
-	}
-	normalize.normalize = normalize$1;
+	versionType.getVersionType = getVersionType;
 	
-	return normalize;
+	return versionType;
 }
 
 var constants = {};
@@ -2914,10 +2116,10 @@ function requireConstants () {
 
 Object.defineProperty(remoteMetrics$1, "__esModule", { value: true });
 remoteMetrics$1.RemoteMetrics = void 0;
-var tslib_1$c = require$$0$2;
+var tslib_1$b = require$$0$2;
 var fetch_1$1 = fetch$2;
 var version_1$2 = version;
-var normalize_1$1 = requireNormalize();
+var version_type_1$1 = requireVersionType();
 var constants_1$1 = requireConstants();
 var createRemoteMetric = function (metric, tags, versionType) {
     var formattedTags = tags.reduce(function (acc, t) {
@@ -2929,7 +2131,7 @@ var createRemoteMetric = function (metric, tags, versionType) {
         type: 'Counter',
         metric: metric,
         value: 1,
-        tags: tslib_1$c.__assign(tslib_1$c.__assign({}, formattedTags), { library: 'analytics.js', library_version: versionType === 'web' ? "next-".concat(version_1$2.version) : "npm:next-".concat(version_1$2.version) }),
+        tags: tslib_1$b.__assign(tslib_1$b.__assign({}, formattedTags), { library: 'analytics.js', library_version: versionType === 'web' ? "next-".concat(version_1$2.version) : "npm:next-".concat(version_1$2.version) }),
     };
 };
 function logError(err) {
@@ -2973,16 +2175,16 @@ var RemoteMetrics = /** @class */ (function () {
         if (this.queue.length >= this.maxQueueSize) {
             return;
         }
-        var remoteMetric = createRemoteMetric(metric, tags, (0, normalize_1$1.getVersionType)());
+        var remoteMetric = createRemoteMetric(metric, tags, (0, version_type_1$1.getVersionType)());
         this.queue.push(remoteMetric);
         if (metric.includes('error')) {
             this.flush().catch(logError);
         }
     };
     RemoteMetrics.prototype.flush = function () {
-        return tslib_1$c.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$b.__awaiter(this, void 0, void 0, function () {
             var _this = this;
-            return tslib_1$c.__generator(this, function (_a) {
+            return tslib_1$b.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.queue.length <= 0) {
@@ -3000,9 +2202,9 @@ var RemoteMetrics = /** @class */ (function () {
         });
     };
     RemoteMetrics.prototype.send = function () {
-        return tslib_1$c.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$b.__awaiter(this, void 0, void 0, function () {
             var payload, headers, url;
-            return tslib_1$c.__generator(this, function (_a) {
+            return tslib_1$b.__generator(this, function (_a) {
                 payload = { series: this.queue };
                 this.queue = [];
                 headers = { 'Content-Type': 'text/plain' };
@@ -3021,12 +2223,12 @@ remoteMetrics$1.RemoteMetrics = RemoteMetrics;
 
 Object.defineProperty(stats, "__esModule", { value: true });
 stats.Stats = void 0;
-var tslib_1$b = require$$0$2;
+var tslib_1$a = require$$0$2;
 var analytics_core_1$3 = require$$5;
 var remote_metrics_1 = remoteMetrics$1;
 var remoteMetrics;
 var Stats = /** @class */ (function (_super) {
-    tslib_1$b.__extends(Stats, _super);
+    tslib_1$a.__extends(Stats, _super);
     function Stats() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
@@ -3062,7 +2264,38 @@ stats.Stats = Stats;
 	
 } (context));
 
+var require$$7 = /*@__PURE__*/getAugmentedNamespace(esm$1);
+
 var events = {};
+
+var dist$3 = {};
+
+var IDX=256, HEX=[], BUFFER;
+while (IDX--) HEX[IDX] = (IDX + 256).toString(16).substring(1);
+
+function v4() {
+	var i=0, num, out='';
+
+	if (!BUFFER || ((IDX + 16) > 256)) {
+		BUFFER = Array(i=256);
+		while (i--) BUFFER[i] = 256 * Math.random() | 0;
+		i = IDX = 0;
+	}
+
+	for (; i < 16; i++) {
+		num = BUFFER[IDX + i];
+		if (i==6) out += HEX[num & 15 | 64];
+		else if (i==8) out += HEX[num & 63 | 128];
+		else out += HEX[num];
+
+		if (i & 1 && i > 1 && i < 11) out += '-';
+	}
+
+	IDX++;
+	return out;
+}
+
+dist$3.v4 = v4;
 
 var dist$2 = {};
 
@@ -3810,6 +3043,181 @@ function requireSparkMd5 () {
 	return sparkMd5.exports;
 }
 
+var page$1 = {};
+
+var getPageContext = {};
+
+var hasRequiredGetPageContext;
+
+function requireGetPageContext () {
+	if (hasRequiredGetPageContext) return getPageContext;
+	hasRequiredGetPageContext = 1;
+	(function (exports) {
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.getDefaultPageContext = exports.getDefaultBufferedPageContext = exports.createPageContext = exports.isBufferedPageContext = exports.createBufferedPageContext = exports.BufferedPageContextDiscriminant = void 0;
+		var analytics_core_1 = require$$5;
+		exports.BufferedPageContextDiscriminant = 'bpc';
+		/**
+		 * `BufferedPageContext` object builder
+		 */
+		var createBufferedPageContext = function (url, canonicalUrl, search, path, title, referrer) { return ({
+		    __t: exports.BufferedPageContextDiscriminant,
+		    c: canonicalUrl,
+		    p: path,
+		    u: url,
+		    s: search,
+		    t: title,
+		    r: referrer,
+		}); };
+		exports.createBufferedPageContext = createBufferedPageContext;
+		// my clever/dubious way of making sure this type guard does not get out sync with the type definition
+		var BUFFERED_PAGE_CONTEXT_KEYS = Object.keys((0, exports.createBufferedPageContext)('', '', '', '', '', ''));
+		function isBufferedPageContext(bufferedPageCtx) {
+		    if (!(0, analytics_core_1.isPlainObject)(bufferedPageCtx))
+		        return false;
+		    if (bufferedPageCtx.__t !== exports.BufferedPageContextDiscriminant)
+		        return false;
+		    // ensure obj has all the keys we expect, and none we don't.
+		    for (var k in bufferedPageCtx) {
+		        if (!BUFFERED_PAGE_CONTEXT_KEYS.includes(k)) {
+		            return false;
+		        }
+		    }
+		    return true;
+		}
+		exports.isBufferedPageContext = isBufferedPageContext;
+		//  Legacy logic: we are we appending search parameters to the canonical URL -- I guess the canonical URL is  "not canonical enough" (lol)
+		var createCanonicalURL = function (canonicalUrl, searchParams) {
+		    return canonicalUrl.indexOf('?') > -1
+		        ? canonicalUrl
+		        : canonicalUrl + searchParams;
+		};
+		/**
+		 * Strips hash from URL.
+		 * http://www.segment.local#test -> http://www.segment.local
+		 */
+		var removeHash = function (href) {
+		    var hashIdx = href.indexOf('#');
+		    return hashIdx === -1 ? href : href.slice(0, hashIdx);
+		};
+		var parseCanonicalPath = function (canonicalUrl) {
+		    try {
+		        return new URL(canonicalUrl).pathname;
+		    }
+		    catch (_e) {
+		        // this is classic behavior -- we assume that if the canonical URL is invalid, it's a raw path.
+		        return canonicalUrl[0] === '/' ? canonicalUrl : '/' + canonicalUrl;
+		    }
+		};
+		/**
+		 * Create a `PageContext` from a `BufferedPageContext`.
+		 * `BufferedPageContext` keys are minified to save bytes in the snippet.
+		 */
+		var createPageContext = function (_a) {
+		    var canonicalUrl = _a.c, pathname = _a.p, search = _a.s, url = _a.u, referrer = _a.r, title = _a.t;
+		    var newPath = canonicalUrl ? parseCanonicalPath(canonicalUrl) : pathname;
+		    var newUrl = canonicalUrl
+		        ? createCanonicalURL(canonicalUrl, search)
+		        : removeHash(url);
+		    return {
+		        path: newPath,
+		        referrer: referrer,
+		        search: search,
+		        title: title,
+		        url: newUrl,
+		    };
+		};
+		exports.createPageContext = createPageContext;
+		/**
+		 * Get page properties from the browser window/document.
+		 */
+		var getDefaultBufferedPageContext = function () {
+		    var c = document.querySelector("link[rel='canonical']");
+		    return (0, exports.createBufferedPageContext)(location.href, (c && c.getAttribute('href')) || undefined, location.search, location.pathname, document.title, document.referrer);
+		};
+		exports.getDefaultBufferedPageContext = getDefaultBufferedPageContext;
+		/**
+		 * Get page properties from the browser window/document.
+		 */
+		var getDefaultPageContext = function () {
+		    return (0, exports.createPageContext)((0, exports.getDefaultBufferedPageContext)());
+		};
+		exports.getDefaultPageContext = getDefaultPageContext;
+		
+	} (getPageContext));
+	return getPageContext;
+}
+
+var addPageContext = {};
+
+var pick = {};
+
+var hasRequiredPick;
+
+function requirePick () {
+	if (hasRequiredPick) return pick;
+	hasRequiredPick = 1;
+	Object.defineProperty(pick, "__esModule", { value: true });
+	pick.pick = void 0;
+	var tslib_1 = require$$0$2;
+	/**
+	 * @example
+	 * pick({ 'a': 1, 'b': '2', 'c': 3 }, ['a', 'c'])
+	 * => { 'a': 1, 'c': 3 }
+	 */
+	function pick$1(object, keys) {
+	    return Object.assign.apply(Object, tslib_1.__spreadArray([{}], keys.map(function (key) {
+	        var _a;
+	        if (object && Object.prototype.hasOwnProperty.call(object, key)) {
+	            return _a = {}, _a[key] = object[key], _a;
+	        }
+	    }), false));
+	}
+	pick.pick = pick$1;
+	
+	return pick;
+}
+
+var hasRequiredAddPageContext;
+
+function requireAddPageContext () {
+	if (hasRequiredAddPageContext) return addPageContext;
+	hasRequiredAddPageContext = 1;
+	Object.defineProperty(addPageContext, "__esModule", { value: true });
+	addPageContext.addPageContext = void 0;
+	var tslib_1 = require$$0$2;
+	var pick_1 = requirePick();
+	var get_page_context_1 = requireGetPageContext();
+	/**
+	 * Augments a segment event with information about the current page.
+	 * Page information like URL changes frequently, so this is meant to be captured as close to the event call as possible.
+	 * Things like `userAgent` do not change, so they can be added later in the flow.
+	 * We prefer not to add this information to this function, as it increases the main bundle size.
+	 */
+	var addPageContext$1 = function (event, pageCtx) {
+	    if (pageCtx === void 0) { pageCtx = (0, get_page_context_1.getDefaultPageContext)(); }
+	    var evtCtx = event.context; // Context should be set earlier in the flow
+	    var pageContextFromEventProps;
+	    if (event.type === 'page') {
+	        pageContextFromEventProps =
+	            event.properties && (0, pick_1.pick)(event.properties, Object.keys(pageCtx));
+	        event.properties = tslib_1.__assign(tslib_1.__assign(tslib_1.__assign({}, pageCtx), event.properties), (event.name ? { name: event.name } : {}));
+	    }
+	    evtCtx.page = tslib_1.__assign(tslib_1.__assign(tslib_1.__assign({}, pageCtx), pageContextFromEventProps), evtCtx.page);
+	};
+	addPageContext.addPageContext = addPageContext$1;
+	
+	return addPageContext;
+}
+
+(function (exports) {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	var tslib_1 = require$$0$2;
+	tslib_1.__exportStar(requireGetPageContext(), exports);
+	tslib_1.__exportStar(requireAddPageContext(), exports);
+	
+} (page$1));
+
 var interfaces = {};
 
 var hasRequiredInterfaces;
@@ -3829,15 +3237,16 @@ function requireInterfaces () {
 	var uuid_1 = dist$3;
 	var dset_1 = dist$2;
 	var spark_md5_1 = tslib_1.__importDefault(requireSparkMd5());
+	var page_1 = page$1;
 	tslib_1.__exportStar(requireInterfaces(), exports);
 	var EventFactory = /** @class */ (function () {
 	    function EventFactory(user) {
 	        this.user = user;
 	    }
-	    EventFactory.prototype.track = function (event, properties, options, globalIntegrations) {
-	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), { event: event, type: 'track', properties: properties, options: tslib_1.__assign({}, options), integrations: tslib_1.__assign({}, globalIntegrations) }));
+	    EventFactory.prototype.track = function (event, properties, options, globalIntegrations, pageCtx) {
+	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), { event: event, type: 'track', properties: properties, options: tslib_1.__assign({}, options), integrations: tslib_1.__assign({}, globalIntegrations) }), pageCtx);
 	    };
-	    EventFactory.prototype.page = function (category, page, properties, options, globalIntegrations) {
+	    EventFactory.prototype.page = function (category, page, properties, options, globalIntegrations, pageCtx) {
 	        var _a;
 	        var event = {
 	            type: 'page',
@@ -3853,9 +3262,9 @@ function requireInterfaces () {
 	        if (page !== null) {
 	            event.name = page;
 	        }
-	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), event));
+	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), event), pageCtx);
 	    };
-	    EventFactory.prototype.screen = function (category, screen, properties, options, globalIntegrations) {
+	    EventFactory.prototype.screen = function (category, screen, properties, options, globalIntegrations, pageCtx) {
 	        var event = {
 	            type: 'screen',
 	            properties: tslib_1.__assign({}, properties),
@@ -3868,15 +3277,15 @@ function requireInterfaces () {
 	        if (screen !== null) {
 	            event.name = screen;
 	        }
-	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), event));
+	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), event), pageCtx);
 	    };
-	    EventFactory.prototype.identify = function (userId, traits, options, globalIntegrations) {
-	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), { type: 'identify', userId: userId, traits: traits, options: tslib_1.__assign({}, options), integrations: tslib_1.__assign({}, globalIntegrations) }));
+	    EventFactory.prototype.identify = function (userId, traits, options, globalIntegrations, pageCtx) {
+	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), { type: 'identify', userId: userId, traits: traits, options: tslib_1.__assign({}, options), integrations: tslib_1.__assign({}, globalIntegrations) }), pageCtx);
 	    };
-	    EventFactory.prototype.group = function (groupId, traits, options, globalIntegrations) {
-	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), { type: 'group', traits: traits, options: tslib_1.__assign({}, options), integrations: tslib_1.__assign({}, globalIntegrations), groupId: groupId }));
+	    EventFactory.prototype.group = function (groupId, traits, options, globalIntegrations, pageCtx) {
+	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), { type: 'group', traits: traits, options: tslib_1.__assign({}, options), integrations: tslib_1.__assign({}, globalIntegrations), groupId: groupId }), pageCtx);
 	    };
-	    EventFactory.prototype.alias = function (to, from, options, globalIntegrations) {
+	    EventFactory.prototype.alias = function (to, from, options, globalIntegrations, pageCtx) {
 	        var base = {
 	            userId: to,
 	            type: 'alias',
@@ -3889,7 +3298,7 @@ function requireInterfaces () {
 	        if (to === undefined) {
 	            return this.normalize(tslib_1.__assign(tslib_1.__assign({}, base), this.baseEvent()));
 	        }
-	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), base));
+	        return this.normalize(tslib_1.__assign(tslib_1.__assign({}, this.baseEvent()), base), pageCtx);
 	    };
 	    EventFactory.prototype.baseEvent = function () {
 	        var base = {
@@ -3930,7 +3339,7 @@ function requireInterfaces () {
 	        });
 	        return [context, overrides];
 	    };
-	    EventFactory.prototype.normalize = function (event) {
+	    EventFactory.prototype.normalize = function (event, pageCtx) {
 	        var _a, _b, _c;
 	        // set anonymousId globally if we encounter an override
 	        //segment.com/docs/connections/sources/catalog/libraries/website/javascript/identity/#override-the-anonymous-id-using-the-options-object
@@ -3948,10 +3357,9 @@ function requireInterfaces () {
 	        var allIntegrations = tslib_1.__assign(tslib_1.__assign({}, integrationBooleans), (_c = event.options) === null || _c === void 0 ? void 0 : _c.integrations);
 	        var _d = this.context(event), context = _d[0], overrides = _d[1];
 	        event.options; var rest = tslib_1.__rest(event, ["options"]);
-	        var body = tslib_1.__assign(tslib_1.__assign(tslib_1.__assign({ timestamp: new Date() }, rest), { context: context, integrations: allIntegrations }), overrides);
-	        var messageId = 'ajs-next-' + spark_md5_1.default.hash(JSON.stringify(body) + (0, uuid_1.v4)());
-	        var evt = tslib_1.__assign(tslib_1.__assign({}, body), { messageId: messageId });
-	        return evt;
+	        var newEvent = tslib_1.__assign(tslib_1.__assign(tslib_1.__assign(tslib_1.__assign({ timestamp: new Date() }, rest), { context: context, integrations: allIntegrations }), overrides), { messageId: 'ajs-next-' + spark_md5_1.default.hash(JSON.stringify(event) + (0, uuid_1.v4)()) });
+	        (0, page_1.addPageContext)(newEvent, pageCtx);
+	        return newEvent;
 	    };
 	    return EventFactory;
 	}());
@@ -3976,9 +3384,9 @@ var priorityQueue = {};
 
 Object.defineProperty(persisted$1, "__esModule", { value: true });
 persisted$1.PersistedPriorityQueue = void 0;
-var tslib_1$a = require$$0$2;
+var tslib_1$9 = require$$0$2;
 var _1 = priorityQueue;
-var context_1$3 = context;
+var context_1$4 = context;
 var environment_1 = requireEnvironment();
 var loc = {
     getItem: function () { },
@@ -3993,14 +3401,14 @@ catch (err) {
 }
 function persisted(key) {
     var items = loc.getItem(key);
-    return (items ? JSON.parse(items) : []).map(function (p) { return new context_1$3.Context(p.event, p.id); });
+    return (items ? JSON.parse(items) : []).map(function (p) { return new context_1$4.Context(p.event, p.id); });
 }
 function persistItems(key, items) {
     var existing = persisted(key);
-    var all = tslib_1$a.__spreadArray(tslib_1$a.__spreadArray([], items, true), existing, true);
+    var all = tslib_1$9.__spreadArray(tslib_1$9.__spreadArray([], items, true), existing, true);
     var merged = all.reduce(function (acc, item) {
         var _a;
-        return tslib_1$a.__assign(tslib_1$a.__assign({}, acc), (_a = {}, _a[item.id] = item, _a));
+        return tslib_1$9.__assign(tslib_1$9.__assign({}, acc), (_a = {}, _a[item.id] = item, _a));
     }, {});
     loc.setItem(key, JSON.stringify(Object.values(merged)));
 }
@@ -4010,7 +3418,7 @@ function seen(key) {
 }
 function persistSeen(key, memory) {
     var stored = seen(key);
-    loc.setItem(key, JSON.stringify(tslib_1$a.__assign(tslib_1$a.__assign({}, stored), memory)));
+    loc.setItem(key, JSON.stringify(tslib_1$9.__assign(tslib_1$9.__assign({}, stored), memory)));
 }
 function remove(key) {
     loc.removeItem(key);
@@ -4040,7 +3448,7 @@ function mutex(key, onUnlock, attempt) {
     }
 }
 var PersistedPriorityQueue = /** @class */ (function (_super) {
-    tslib_1$a.__extends(PersistedPriorityQueue, _super);
+    tslib_1$9.__extends(PersistedPriorityQueue, _super);
     function PersistedPriorityQueue(maxAttempts, key) {
         var _this = _super.call(this, maxAttempts, []) || this;
         var itemsKey = "persisted-queue:v1:".concat(key, ":items");
@@ -4053,8 +3461,8 @@ var PersistedPriorityQueue = /** @class */ (function (_super) {
                 lastSeen = seen(seenKey);
                 remove(itemsKey);
                 remove(seenKey);
-                _this.queue = tslib_1$a.__spreadArray(tslib_1$a.__spreadArray([], saved, true), _this.queue, true);
-                _this.seen = tslib_1$a.__assign(tslib_1$a.__assign({}, lastSeen), _this.seen);
+                _this.queue = tslib_1$9.__spreadArray(tslib_1$9.__spreadArray([], saved, true), _this.queue, true);
+                _this.seen = tslib_1$9.__assign(tslib_1$9.__assign({}, lastSeen), _this.seen);
             }
             catch (err) {
                 console.error(err);
@@ -4063,7 +3471,7 @@ var PersistedPriorityQueue = /** @class */ (function (_super) {
         window.addEventListener('pagehide', function () {
             // we deliberately want to use the less powerful 'pagehide' API to only persist on events where the analytics instance gets destroyed, and not on tab away.
             if (_this.todo > 0) {
-                var items_1 = tslib_1$a.__spreadArray(tslib_1$a.__spreadArray([], _this.queue, true), _this.future, true);
+                var items_1 = tslib_1$9.__spreadArray(tslib_1$9.__spreadArray([], _this.queue, true), _this.future, true);
                 try {
                     mutex(key, function () {
                         persistItems(itemsKey, items_1);
@@ -4083,20 +3491,20 @@ persisted$1.PersistedPriorityQueue = PersistedPriorityQueue;
 
 Object.defineProperty(eventQueue, "__esModule", { value: true });
 eventQueue.EventQueue = void 0;
-var tslib_1$9 = require$$0$2;
+var tslib_1$8 = require$$0$2;
 var persisted_1$2 = persisted$1;
 var analytics_core_1$2 = require$$5;
 var connection_1$2 = connection;
 var EventQueue = /** @class */ (function (_super) {
-    tslib_1$9.__extends(EventQueue, _super);
+    tslib_1$8.__extends(EventQueue, _super);
     function EventQueue(nameOrQueue) {
         return _super.call(this, typeof nameOrQueue === 'string'
             ? new persisted_1$2.PersistedPriorityQueue(4, nameOrQueue)
             : nameOrQueue) || this;
     }
     EventQueue.prototype.flush = function () {
-        return tslib_1$9.__awaiter(this, void 0, void 0, function () {
-            return tslib_1$9.__generator(this, function (_a) {
+        return tslib_1$8.__awaiter(this, void 0, void 0, function () {
+            return tslib_1$8.__generator(this, function (_a) {
                 if ((0, connection_1$2.isOffline)())
                     return [2 /*return*/, []];
                 return [2 /*return*/, _super.prototype.flush.call(this)];
@@ -4106,6 +3514,1141 @@ var EventQueue = /** @class */ (function (_super) {
     return EventQueue;
 }(analytics_core_1$2.CoreEventQueue));
 eventQueue.EventQueue = EventQueue;
+
+var user = {};
+
+var bindAll = {};
+
+var hasRequiredBindAll;
+
+function requireBindAll () {
+	if (hasRequiredBindAll) return bindAll;
+	hasRequiredBindAll = 1;
+	Object.defineProperty(bindAll, "__esModule", { value: true });
+	function bindAll$1(obj) {
+	    var proto = obj.constructor.prototype;
+	    for (var _i = 0, _a = Object.getOwnPropertyNames(proto); _i < _a.length; _i++) {
+	        var key = _a[_i];
+	        if (key !== 'constructor') {
+	            var desc = Object.getOwnPropertyDescriptor(obj.constructor.prototype, key);
+	            if (!!desc && typeof desc.value === 'function') {
+	                obj[key] = obj[key].bind(obj);
+	            }
+	        }
+	    }
+	    return obj;
+	}
+	bindAll.default = bindAll$1;
+	
+	return bindAll;
+}
+
+var storage = {};
+
+var cookieStorage = {};
+
+var js_cookie = {exports: {}};
+
+/*! js-cookie v3.0.1 | MIT */
+
+var hasRequiredJs_cookie;
+
+function requireJs_cookie () {
+	if (hasRequiredJs_cookie) return js_cookie.exports;
+	hasRequiredJs_cookie = 1;
+	(function (module, exports) {
+		(function (global, factory) {
+		  module.exports = factory() ;
+		}(commonjsGlobal, (function () {
+		  /* eslint-disable no-var */
+		  function assign (target) {
+		    for (var i = 1; i < arguments.length; i++) {
+		      var source = arguments[i];
+		      for (var key in source) {
+		        target[key] = source[key];
+		      }
+		    }
+		    return target
+		  }
+		  /* eslint-enable no-var */
+
+		  /* eslint-disable no-var */
+		  var defaultConverter = {
+		    read: function (value) {
+		      if (value[0] === '"') {
+		        value = value.slice(1, -1);
+		      }
+		      return value.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent)
+		    },
+		    write: function (value) {
+		      return encodeURIComponent(value).replace(
+		        /%(2[346BF]|3[AC-F]|40|5[BDE]|60|7[BCD])/g,
+		        decodeURIComponent
+		      )
+		    }
+		  };
+		  /* eslint-enable no-var */
+
+		  /* eslint-disable no-var */
+
+		  function init (converter, defaultAttributes) {
+		    function set (key, value, attributes) {
+		      if (typeof document === 'undefined') {
+		        return
+		      }
+
+		      attributes = assign({}, defaultAttributes, attributes);
+
+		      if (typeof attributes.expires === 'number') {
+		        attributes.expires = new Date(Date.now() + attributes.expires * 864e5);
+		      }
+		      if (attributes.expires) {
+		        attributes.expires = attributes.expires.toUTCString();
+		      }
+
+		      key = encodeURIComponent(key)
+		        .replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent)
+		        .replace(/[()]/g, escape);
+
+		      var stringifiedAttributes = '';
+		      for (var attributeName in attributes) {
+		        if (!attributes[attributeName]) {
+		          continue
+		        }
+
+		        stringifiedAttributes += '; ' + attributeName;
+
+		        if (attributes[attributeName] === true) {
+		          continue
+		        }
+
+		        // Considers RFC 6265 section 5.2:
+		        // ...
+		        // 3.  If the remaining unparsed-attributes contains a %x3B (";")
+		        //     character:
+		        // Consume the characters of the unparsed-attributes up to,
+		        // not including, the first %x3B (";") character.
+		        // ...
+		        stringifiedAttributes += '=' + attributes[attributeName].split(';')[0];
+		      }
+
+		      return (document.cookie =
+		        key + '=' + converter.write(value, key) + stringifiedAttributes)
+		    }
+
+		    function get (key) {
+		      if (typeof document === 'undefined' || (arguments.length && !key)) {
+		        return
+		      }
+
+		      // To prevent the for loop in the first place assign an empty array
+		      // in case there are no cookies at all.
+		      var cookies = document.cookie ? document.cookie.split('; ') : [];
+		      var jar = {};
+		      for (var i = 0; i < cookies.length; i++) {
+		        var parts = cookies[i].split('=');
+		        var value = parts.slice(1).join('=');
+
+		        try {
+		          var foundKey = decodeURIComponent(parts[0]);
+		          jar[foundKey] = converter.read(value, foundKey);
+
+		          if (key === foundKey) {
+		            break
+		          }
+		        } catch (e) {}
+		      }
+
+		      return key ? jar[key] : jar
+		    }
+
+		    return Object.create(
+		      {
+		        set: set,
+		        get: get,
+		        remove: function (key, attributes) {
+		          set(
+		            key,
+		            '',
+		            assign({}, attributes, {
+		              expires: -1
+		            })
+		          );
+		        },
+		        withAttributes: function (attributes) {
+		          return init(this.converter, assign({}, this.attributes, attributes))
+		        },
+		        withConverter: function (converter) {
+		          return init(assign({}, this.converter, converter), this.attributes)
+		        }
+		      },
+		      {
+		        attributes: { value: Object.freeze(defaultAttributes) },
+		        converter: { value: Object.freeze(converter) }
+		      }
+		    )
+		  }
+
+		  var api = init(defaultConverter, { path: '/' });
+		  /* eslint-enable no-var */
+
+		  return api;
+
+		}))); 
+	} (js_cookie));
+	return js_cookie.exports;
+}
+
+var tld = {};
+
+var hasRequiredTld;
+
+function requireTld () {
+	if (hasRequiredTld) return tld;
+	hasRequiredTld = 1;
+	Object.defineProperty(tld, "__esModule", { value: true });
+	tld.tld = void 0;
+	var tslib_1 = require$$0$2;
+	var js_cookie_1 = tslib_1.__importDefault(requireJs_cookie());
+	/**
+	 * Levels returns all levels of the given url.
+	 *
+	 * @param {string} url
+	 * @return {Array}
+	 * @api public
+	 */
+	function levels(url) {
+	    var host = url.hostname;
+	    var parts = host.split('.');
+	    var last = parts[parts.length - 1];
+	    var levels = [];
+	    // Ip address.
+	    if (parts.length === 4 && parseInt(last, 10) > 0) {
+	        return levels;
+	    }
+	    // Localhost.
+	    if (parts.length <= 1) {
+	        return levels;
+	    }
+	    // Create levels.
+	    for (var i = parts.length - 2; i >= 0; --i) {
+	        levels.push(parts.slice(i).join('.'));
+	    }
+	    return levels;
+	}
+	function parseUrl(url) {
+	    try {
+	        return new URL(url);
+	    }
+	    catch (_a) {
+	        return;
+	    }
+	}
+	function tld$1(url) {
+	    var parsedUrl = parseUrl(url);
+	    if (!parsedUrl)
+	        return;
+	    var lvls = levels(parsedUrl);
+	    // Lookup the real top level one.
+	    for (var i = 0; i < lvls.length; ++i) {
+	        var cname = '__tld__';
+	        var domain = lvls[i];
+	        var opts = { domain: '.' + domain };
+	        try {
+	            // cookie access throw an error if the library is ran inside a sandboxed environment (e.g. sandboxed iframe)
+	            js_cookie_1.default.set(cname, '1', opts);
+	            if (js_cookie_1.default.get(cname)) {
+	                js_cookie_1.default.remove(cname, opts);
+	                return domain;
+	            }
+	        }
+	        catch (_) {
+	            return;
+	        }
+	    }
+	}
+	tld.tld = tld$1;
+	
+	return tld;
+}
+
+var hasRequiredCookieStorage;
+
+function requireCookieStorage () {
+	if (hasRequiredCookieStorage) return cookieStorage;
+	hasRequiredCookieStorage = 1;
+	Object.defineProperty(cookieStorage, "__esModule", { value: true });
+	cookieStorage.CookieStorage = void 0;
+	var tslib_1 = require$$0$2;
+	var js_cookie_1 = tslib_1.__importDefault(requireJs_cookie());
+	var tld_1 = requireTld();
+	var ONE_YEAR = 365;
+	/**
+	 * Data storage using browser cookies
+	 */
+	var CookieStorage = /** @class */ (function () {
+	    function CookieStorage(options) {
+	        if (options === void 0) { options = CookieStorage.defaults; }
+	        this.options = tslib_1.__assign(tslib_1.__assign({}, CookieStorage.defaults), options);
+	    }
+	    Object.defineProperty(CookieStorage, "defaults", {
+	        get: function () {
+	            return {
+	                maxage: ONE_YEAR,
+	                domain: (0, tld_1.tld)(window.location.href),
+	                path: '/',
+	                sameSite: 'Lax',
+	            };
+	        },
+	        enumerable: false,
+	        configurable: true
+	    });
+	    CookieStorage.prototype.opts = function () {
+	        return {
+	            sameSite: this.options.sameSite,
+	            expires: this.options.maxage,
+	            domain: this.options.domain,
+	            path: this.options.path,
+	            secure: this.options.secure,
+	        };
+	    };
+	    CookieStorage.prototype.get = function (key) {
+	        var _a;
+	        try {
+	            var value = js_cookie_1.default.get(key);
+	            if (value === undefined || value === null) {
+	                return null;
+	            }
+	            try {
+	                return (_a = JSON.parse(value)) !== null && _a !== void 0 ? _a : null;
+	            }
+	            catch (e) {
+	                return (value !== null && value !== void 0 ? value : null);
+	            }
+	        }
+	        catch (e) {
+	            return null;
+	        }
+	    };
+	    CookieStorage.prototype.set = function (key, value) {
+	        if (typeof value === 'string') {
+	            js_cookie_1.default.set(key, value, this.opts());
+	        }
+	        else if (value === null) {
+	            js_cookie_1.default.remove(key, this.opts());
+	        }
+	        else {
+	            js_cookie_1.default.set(key, JSON.stringify(value), this.opts());
+	        }
+	    };
+	    CookieStorage.prototype.remove = function (key) {
+	        return js_cookie_1.default.remove(key, this.opts());
+	    };
+	    return CookieStorage;
+	}());
+	cookieStorage.CookieStorage = CookieStorage;
+	
+	return cookieStorage;
+}
+
+var localStorage$1 = {};
+
+var hasRequiredLocalStorage;
+
+function requireLocalStorage () {
+	if (hasRequiredLocalStorage) return localStorage$1;
+	hasRequiredLocalStorage = 1;
+	Object.defineProperty(localStorage$1, "__esModule", { value: true });
+	localStorage$1.LocalStorage = void 0;
+	/**
+	 * Data storage using browser's localStorage
+	 */
+	var LocalStorage = /** @class */ (function () {
+	    function LocalStorage() {
+	    }
+	    LocalStorage.prototype.localStorageWarning = function (key, state) {
+	        console.warn("Unable to access ".concat(key, ", localStorage may be ").concat(state));
+	    };
+	    LocalStorage.prototype.get = function (key) {
+	        var _a;
+	        try {
+	            var val = localStorage.getItem(key);
+	            if (val === null) {
+	                return null;
+	            }
+	            try {
+	                return (_a = JSON.parse(val)) !== null && _a !== void 0 ? _a : null;
+	            }
+	            catch (e) {
+	                return (val !== null && val !== void 0 ? val : null);
+	            }
+	        }
+	        catch (err) {
+	            this.localStorageWarning(key, 'unavailable');
+	            return null;
+	        }
+	    };
+	    LocalStorage.prototype.set = function (key, value) {
+	        try {
+	            localStorage.setItem(key, JSON.stringify(value));
+	        }
+	        catch (_a) {
+	            this.localStorageWarning(key, 'full');
+	        }
+	    };
+	    LocalStorage.prototype.remove = function (key) {
+	        try {
+	            return localStorage.removeItem(key);
+	        }
+	        catch (err) {
+	            this.localStorageWarning(key, 'unavailable');
+	        }
+	    };
+	    return LocalStorage;
+	}());
+	localStorage$1.LocalStorage = LocalStorage;
+	
+	return localStorage$1;
+}
+
+var memoryStorage = {};
+
+var hasRequiredMemoryStorage;
+
+function requireMemoryStorage () {
+	if (hasRequiredMemoryStorage) return memoryStorage;
+	hasRequiredMemoryStorage = 1;
+	Object.defineProperty(memoryStorage, "__esModule", { value: true });
+	memoryStorage.MemoryStorage = void 0;
+	/**
+	 * Data Storage using in memory object
+	 */
+	var MemoryStorage = /** @class */ (function () {
+	    function MemoryStorage() {
+	        this.cache = {};
+	    }
+	    MemoryStorage.prototype.get = function (key) {
+	        var _a;
+	        return ((_a = this.cache[key]) !== null && _a !== void 0 ? _a : null);
+	    };
+	    MemoryStorage.prototype.set = function (key, value) {
+	        this.cache[key] = value;
+	    };
+	    MemoryStorage.prototype.remove = function (key) {
+	        delete this.cache[key];
+	    };
+	    return MemoryStorage;
+	}());
+	memoryStorage.MemoryStorage = MemoryStorage;
+	
+	return memoryStorage;
+}
+
+var settings = {};
+
+var types = {};
+
+var hasRequiredTypes;
+
+function requireTypes () {
+	if (hasRequiredTypes) return types;
+	hasRequiredTypes = 1;
+	Object.defineProperty(types, "__esModule", { value: true });
+	types.StoreType = void 0;
+	types.StoreType = {
+	    Cookie: 'cookie',
+	    LocalStorage: 'localStorage',
+	    Memory: 'memory',
+	};
+	
+	return types;
+}
+
+var hasRequiredSettings;
+
+function requireSettings () {
+	if (hasRequiredSettings) return settings;
+	hasRequiredSettings = 1;
+	Object.defineProperty(settings, "__esModule", { value: true });
+	settings.isStoreTypeWithSettings = settings.isArrayOfStoreType = void 0;
+	var types_1 = requireTypes();
+	function isArrayOfStoreType(s) {
+	    return (s &&
+	        s.stores &&
+	        Array.isArray(s.stores) &&
+	        s.stores.every(function (e) { return Object.values(types_1.StoreType).includes(e); }));
+	}
+	settings.isArrayOfStoreType = isArrayOfStoreType;
+	function isStoreTypeWithSettings(s) {
+	    return typeof s === 'object' && s.name !== undefined;
+	}
+	settings.isStoreTypeWithSettings = isStoreTypeWithSettings;
+	
+	return settings;
+}
+
+var universalStorage = {};
+
+var hasRequiredUniversalStorage;
+
+function requireUniversalStorage () {
+	if (hasRequiredUniversalStorage) return universalStorage;
+	hasRequiredUniversalStorage = 1;
+	Object.defineProperty(universalStorage, "__esModule", { value: true });
+	universalStorage.UniversalStorage = void 0;
+	// not adding to private method because those method names do not get minified atm, and does not use 'this'
+	var _logStoreKeyError = function (store, action, key, err) {
+	    console.warn("".concat(store.constructor.name, ": Can't ").concat(action, " key \"").concat(key, "\" | Err: ").concat(err));
+	};
+	/**
+	 * Uses multiple storages in a priority list to get/set values in the order they are specified.
+	 */
+	var UniversalStorage = /** @class */ (function () {
+	    function UniversalStorage(stores) {
+	        this.stores = stores;
+	    }
+	    UniversalStorage.prototype.get = function (key) {
+	        var val = null;
+	        for (var _i = 0, _a = this.stores; _i < _a.length; _i++) {
+	            var store = _a[_i];
+	            try {
+	                val = store.get(key);
+	                if (val !== undefined && val !== null) {
+	                    return val;
+	                }
+	            }
+	            catch (e) {
+	                _logStoreKeyError(store, 'get', key, e);
+	            }
+	        }
+	        return null;
+	    };
+	    UniversalStorage.prototype.set = function (key, value) {
+	        this.stores.forEach(function (store) {
+	            try {
+	                store.set(key, value);
+	            }
+	            catch (e) {
+	                _logStoreKeyError(store, 'set', key, e);
+	            }
+	        });
+	    };
+	    UniversalStorage.prototype.clear = function (key) {
+	        this.stores.forEach(function (store) {
+	            try {
+	                store.remove(key);
+	            }
+	            catch (e) {
+	                _logStoreKeyError(store, 'remove', key, e);
+	            }
+	        });
+	    };
+	    /*
+	      This is to support few scenarios where:
+	      - value exist in one of the stores ( as a result of other stores being cleared from browser ) and we want to resync them
+	      - read values in AJS 1.0 format ( for customers after 1.0 --> 2.0 migration ) and then re-write them in AJS 2.0 format
+	    */
+	    UniversalStorage.prototype.getAndSync = function (key) {
+	        var val = this.get(key);
+	        // legacy behavior, getAndSync can change the type of a value from number to string (AJS 1.0 stores numerical values as a number)
+	        var coercedValue = (typeof val === 'number' ? val.toString() : val);
+	        this.set(key, coercedValue);
+	        return coercedValue;
+	    };
+	    return UniversalStorage;
+	}());
+	universalStorage.UniversalStorage = UniversalStorage;
+	
+	return universalStorage;
+}
+
+var hasRequiredStorage;
+
+function requireStorage () {
+	if (hasRequiredStorage) return storage;
+	hasRequiredStorage = 1;
+	(function (exports) {
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.applyCookieOptions = exports.initializeStorages = void 0;
+		var tslib_1 = require$$0$2;
+		var cookieStorage_1 = requireCookieStorage();
+		var localStorage_1 = requireLocalStorage();
+		var memoryStorage_1 = requireMemoryStorage();
+		var settings_1 = requireSettings();
+		var types_1 = requireTypes();
+		tslib_1.__exportStar(requireTypes(), exports);
+		tslib_1.__exportStar(requireLocalStorage(), exports);
+		tslib_1.__exportStar(requireCookieStorage(), exports);
+		tslib_1.__exportStar(requireMemoryStorage(), exports);
+		tslib_1.__exportStar(requireUniversalStorage(), exports);
+		tslib_1.__exportStar(requireSettings(), exports);
+		/**
+		 * Creates multiple storage systems from an array of StoreType and options
+		 * @param args StoreType and options
+		 * @returns Storage array
+		 */
+		function initializeStorages(args) {
+		    var storages = args.map(function (s) {
+		        var type;
+		        var settings;
+		        if ((0, settings_1.isStoreTypeWithSettings)(s)) {
+		            type = s.name;
+		            settings = s.settings;
+		        }
+		        else {
+		            type = s;
+		        }
+		        switch (type) {
+		            case types_1.StoreType.Cookie:
+		                return new cookieStorage_1.CookieStorage(settings);
+		            case types_1.StoreType.LocalStorage:
+		                return new localStorage_1.LocalStorage();
+		            case types_1.StoreType.Memory:
+		                return new memoryStorage_1.MemoryStorage();
+		            default:
+		                throw new Error("Unknown Store Type: ".concat(s));
+		        }
+		    });
+		    return storages;
+		}
+		exports.initializeStorages = initializeStorages;
+		/**
+		 * Injects the CookieOptions into a the arguments for initializeStorage
+		 * @param storeTypes list of storeType
+		 * @param cookieOptions cookie Options
+		 * @returns arguments for initializeStorage
+		 */
+		function applyCookieOptions(storeTypes, cookieOptions) {
+		    return storeTypes.map(function (s) {
+		        if (cookieOptions && s === types_1.StoreType.Cookie) {
+		            return {
+		                name: s,
+		                settings: cookieOptions,
+		            };
+		        }
+		        return s;
+		    });
+		}
+		exports.applyCookieOptions = applyCookieOptions;
+		
+	} (storage));
+	return storage;
+}
+
+Object.defineProperty(user, "__esModule", { value: true });
+user.Group = user.User = void 0;
+var tslib_1$7 = require$$0$2;
+var uuid_1 = dist$3;
+var bind_all_1$1 = tslib_1$7.__importDefault(requireBindAll());
+var storage_1$2 = requireStorage();
+var defaults = {
+    persist: true,
+    cookie: {
+        key: 'ajs_user_id',
+        oldKey: 'ajs_user',
+    },
+    localStorage: {
+        key: 'ajs_user_traits',
+    },
+};
+var User = /** @class */ (function () {
+    function User(options, cookieOptions) {
+        if (options === void 0) { options = defaults; }
+        var _this = this;
+        var _a, _b, _c, _d;
+        this.options = {};
+        this.id = function (id) {
+            if (_this.options.disable) {
+                return null;
+            }
+            var prevId = _this.identityStore.getAndSync(_this.idKey);
+            if (id !== undefined) {
+                _this.identityStore.set(_this.idKey, id);
+                var changingIdentity = id !== prevId && prevId !== null && id !== null;
+                if (changingIdentity) {
+                    _this.anonymousId(null);
+                }
+            }
+            var retId = _this.identityStore.getAndSync(_this.idKey);
+            if (retId)
+                return retId;
+            var retLeg = _this.legacyUserStore.get(defaults.cookie.oldKey);
+            return retLeg ? (typeof retLeg === 'object' ? retLeg.id : retLeg) : null;
+        };
+        this.anonymousId = function (id) {
+            var _a, _b;
+            if (_this.options.disable) {
+                return null;
+            }
+            if (id === undefined) {
+                var val = (_a = _this.identityStore.getAndSync(_this.anonKey)) !== null && _a !== void 0 ? _a : (_b = _this.legacySIO()) === null || _b === void 0 ? void 0 : _b[0];
+                if (val) {
+                    return val;
+                }
+            }
+            if (id === null) {
+                _this.identityStore.set(_this.anonKey, null);
+                return _this.identityStore.getAndSync(_this.anonKey);
+            }
+            _this.identityStore.set(_this.anonKey, id !== null && id !== void 0 ? id : (0, uuid_1.v4)());
+            return _this.identityStore.getAndSync(_this.anonKey);
+        };
+        this.traits = function (traits) {
+            var _a;
+            if (_this.options.disable) {
+                return;
+            }
+            if (traits === null) {
+                traits = {};
+            }
+            if (traits) {
+                _this.traitsStore.set(_this.traitsKey, traits !== null && traits !== void 0 ? traits : {});
+            }
+            return (_a = _this.traitsStore.get(_this.traitsKey)) !== null && _a !== void 0 ? _a : {};
+        };
+        this.options = tslib_1$7.__assign(tslib_1$7.__assign({}, defaults), options);
+        this.cookieOptions = cookieOptions;
+        this.idKey = (_b = (_a = options.cookie) === null || _a === void 0 ? void 0 : _a.key) !== null && _b !== void 0 ? _b : defaults.cookie.key;
+        this.traitsKey = (_d = (_c = options.localStorage) === null || _c === void 0 ? void 0 : _c.key) !== null && _d !== void 0 ? _d : defaults.localStorage.key;
+        this.anonKey = 'ajs_anonymous_id';
+        this.identityStore = this.createStorage(this.options, cookieOptions);
+        // using only cookies for legacy user store
+        this.legacyUserStore = this.createStorage(this.options, cookieOptions, function (s) { return s === storage_1$2.StoreType.Cookie; });
+        // using only localStorage / memory for traits store
+        this.traitsStore = this.createStorage(this.options, cookieOptions, function (s) { return s !== storage_1$2.StoreType.Cookie; });
+        var legacyUser = this.legacyUserStore.get(defaults.cookie.oldKey);
+        if (legacyUser && typeof legacyUser === 'object') {
+            legacyUser.id && this.id(legacyUser.id);
+            legacyUser.traits && this.traits(legacyUser.traits);
+        }
+        (0, bind_all_1$1.default)(this);
+    }
+    User.prototype.legacySIO = function () {
+        var val = this.legacyUserStore.get('_sio');
+        if (!val) {
+            return null;
+        }
+        var _a = val.split('----'), anon = _a[0], user = _a[1];
+        return [anon, user];
+    };
+    User.prototype.identify = function (id, traits) {
+        if (this.options.disable) {
+            return;
+        }
+        traits = traits !== null && traits !== void 0 ? traits : {};
+        var currentId = this.id();
+        if (currentId === null || currentId === id) {
+            traits = tslib_1$7.__assign(tslib_1$7.__assign({}, this.traits()), traits);
+        }
+        if (id) {
+            this.id(id);
+        }
+        this.traits(traits);
+    };
+    User.prototype.logout = function () {
+        this.anonymousId(null);
+        this.id(null);
+        this.traits({});
+    };
+    User.prototype.reset = function () {
+        this.logout();
+        this.identityStore.clear(this.idKey);
+        this.identityStore.clear(this.anonKey);
+        this.traitsStore.clear(this.traitsKey);
+    };
+    User.prototype.load = function () {
+        return new User(this.options, this.cookieOptions);
+    };
+    User.prototype.save = function () {
+        return true;
+    };
+    /**
+     * Creates the right storage system applying all the user options, cookie options and particular filters
+     * @param options UserOptions
+     * @param cookieOpts CookieOptions
+     * @param filterStores filter function to apply to any StoreTypes (skipped if options specify using a custom storage)
+     * @returns a Storage object
+     */
+    User.prototype.createStorage = function (options, cookieOpts, filterStores) {
+        var stores = [
+            storage_1$2.StoreType.LocalStorage,
+            storage_1$2.StoreType.Cookie,
+            storage_1$2.StoreType.Memory,
+        ];
+        // If disabled we won't have any storage functionality
+        if (options.disable) {
+            return new storage_1$2.UniversalStorage([]);
+        }
+        // If persistance is disabled we will always fallback to Memory Storage
+        if (!options.persist) {
+            return new storage_1$2.UniversalStorage([new storage_1$2.MemoryStorage()]);
+        }
+        if (options.storage !== undefined && options.storage !== null) {
+            if ((0, storage_1$2.isArrayOfStoreType)(options.storage)) {
+                // If the user only specified order of stores we will still apply filters and transformations e.g. not using localStorage if localStorageFallbackDisabled
+                stores = options.storage.stores;
+            }
+        }
+        // Disable LocalStorage
+        if (options.localStorageFallbackDisabled) {
+            stores = stores.filter(function (s) { return s !== storage_1$2.StoreType.LocalStorage; });
+        }
+        // Apply Additional filters
+        if (filterStores) {
+            stores = stores.filter(filterStores);
+        }
+        return new storage_1$2.UniversalStorage((0, storage_1$2.initializeStorages)((0, storage_1$2.applyCookieOptions)(stores, cookieOpts)));
+    };
+    User.defaults = defaults;
+    return User;
+}());
+user.User = User;
+var groupDefaults = {
+    persist: true,
+    cookie: {
+        key: 'ajs_group_id',
+    },
+    localStorage: {
+        key: 'ajs_group_properties',
+    },
+};
+var Group = /** @class */ (function (_super) {
+    tslib_1$7.__extends(Group, _super);
+    function Group(options, cookie) {
+        if (options === void 0) { options = groupDefaults; }
+        var _this = _super.call(this, tslib_1$7.__assign(tslib_1$7.__assign({}, groupDefaults), options), cookie) || this;
+        _this.anonymousId = function (_id) {
+            return undefined;
+        };
+        (0, bind_all_1$1.default)(_this);
+        return _this;
+    }
+    return Group;
+}(User));
+user.Group = Group;
+
+var buffer = {};
+
+var isThenable$1 = {};
+
+Object.defineProperty(isThenable$1, "__esModule", { value: true });
+isThenable$1.isThenable = void 0;
+/**
+ *  Check if  thenable
+ *  (instanceof Promise doesn't respect realms)
+ */
+var isThenable = function (value) {
+    return typeof value === 'object' &&
+        value !== null &&
+        'then' in value &&
+        typeof value.then === 'function';
+};
+isThenable$1.isThenable = isThenable;
+
+(function (exports) {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.AnalyticsBuffered = exports.callAnalyticsMethod = exports.PreInitMethodCallBuffer = exports.PreInitMethodCall = exports.hasBufferedPageContextAsLastArg = exports.popPageContext = exports.flushAnalyticsCallsInNewTask = exports.flushSetAnonymousID = exports.flushOn = exports.flushAddSourceMiddleware = void 0;
+	var tslib_1 = require$$0$2;
+	var is_thenable_1 = isThenable$1;
+	var version_1 = version;
+	var global_analytics_helper_1 = globalAnalyticsHelper;
+	var page_1 = page$1;
+	var flushSyncAnalyticsCalls = function (name, analytics, buffer) {
+	    buffer.getCalls(name).forEach(function (c) {
+	        // While the underlying methods are synchronous, the callAnalyticsMethod returns a promise,
+	        // which normalizes success and error states between async and non-async methods, with no perf penalty.
+	        callAnalyticsMethod(analytics, c).catch(console.error);
+	    });
+	};
+	var flushAddSourceMiddleware = function (analytics, buffer) { return tslib_1.__awaiter(void 0, void 0, void 0, function () {
+	    var _i, _a, c;
+	    return tslib_1.__generator(this, function (_b) {
+	        switch (_b.label) {
+	            case 0:
+	                _i = 0, _a = buffer.getCalls('addSourceMiddleware');
+	                _b.label = 1;
+	            case 1:
+	                if (!(_i < _a.length)) return [3 /*break*/, 4];
+	                c = _a[_i];
+	                return [4 /*yield*/, callAnalyticsMethod(analytics, c).catch(console.error)];
+	            case 2:
+	                _b.sent();
+	                _b.label = 3;
+	            case 3:
+	                _i++;
+	                return [3 /*break*/, 1];
+	            case 4: return [2 /*return*/];
+	        }
+	    });
+	}); };
+	exports.flushAddSourceMiddleware = flushAddSourceMiddleware;
+	exports.flushOn = flushSyncAnalyticsCalls.bind(commonjsGlobal, 'on');
+	exports.flushSetAnonymousID = flushSyncAnalyticsCalls.bind(commonjsGlobal, 'setAnonymousId');
+	var flushAnalyticsCallsInNewTask = function (analytics, buffer) {
+	    buffer.toArray().forEach(function (m) {
+	        setTimeout(function () {
+	            callAnalyticsMethod(analytics, m).catch(console.error);
+	        }, 0);
+	    });
+	};
+	exports.flushAnalyticsCallsInNewTask = flushAnalyticsCallsInNewTask;
+	var popPageContext = function (args) {
+	    if ((0, exports.hasBufferedPageContextAsLastArg)(args)) {
+	        var ctx = args.pop();
+	        return (0, page_1.createPageContext)(ctx);
+	    }
+	};
+	exports.popPageContext = popPageContext;
+	var hasBufferedPageContextAsLastArg = function (args) {
+	    var lastArg = args[args.length - 1];
+	    return (0, page_1.isBufferedPageContext)(lastArg);
+	};
+	exports.hasBufferedPageContextAsLastArg = hasBufferedPageContextAsLastArg;
+	/**
+	 *  Represents a buffered method call that occurred before initialization.
+	 */
+	var PreInitMethodCall = /** @class */ (function () {
+	    function PreInitMethodCall(method, args, resolve, reject) {
+	        if (resolve === void 0) { resolve = function () { }; }
+	        if (reject === void 0) { reject = console.error; }
+	        this.method = method;
+	        this.resolve = resolve;
+	        this.reject = reject;
+	        this.called = false;
+	        this.args = args;
+	    }
+	    return PreInitMethodCall;
+	}());
+	exports.PreInitMethodCall = PreInitMethodCall;
+	/**
+	 *  Represents any and all the buffered method calls that occurred before initialization.
+	 */
+	var PreInitMethodCallBuffer = /** @class */ (function () {
+	    function PreInitMethodCallBuffer() {
+	        var calls = [];
+	        for (var _i = 0; _i < arguments.length; _i++) {
+	            calls[_i] = arguments[_i];
+	        }
+	        this._callMap = {};
+	        this.push.apply(this, calls);
+	    }
+	    Object.defineProperty(PreInitMethodCallBuffer.prototype, "calls", {
+	        /**
+	         * Pull any buffered method calls from the window object, and use them to hydrate the instance buffer.
+	         */
+	        get: function () {
+	            this._pushSnippetWindowBuffer();
+	            return this._callMap;
+	        },
+	        set: function (calls) {
+	            this._callMap = calls;
+	        },
+	        enumerable: false,
+	        configurable: true
+	    });
+	    PreInitMethodCallBuffer.prototype.getCalls = function (methodName) {
+	        var _a;
+	        return ((_a = this.calls[methodName]) !== null && _a !== void 0 ? _a : []);
+	    };
+	    PreInitMethodCallBuffer.prototype.push = function () {
+	        var _this = this;
+	        var calls = [];
+	        for (var _i = 0; _i < arguments.length; _i++) {
+	            calls[_i] = arguments[_i];
+	        }
+	        calls.forEach(function (call) {
+	            var eventsExpectingPageContext = [
+	                'track',
+	                'screen',
+	                'alias',
+	                'group',
+	                'page',
+	                'identify',
+	            ];
+	            if (eventsExpectingPageContext.includes(call.method) &&
+	                !(0, exports.hasBufferedPageContextAsLastArg)(call.args)) {
+	                call.args = tslib_1.__spreadArray(tslib_1.__spreadArray([], call.args, true), [(0, page_1.getDefaultBufferedPageContext)()], false);
+	            }
+	            if (_this.calls[call.method]) {
+	                _this.calls[call.method].push(call);
+	            }
+	            else {
+	                _this.calls[call.method] = [call];
+	            }
+	        });
+	    };
+	    PreInitMethodCallBuffer.prototype.clear = function () {
+	        // clear calls in the global snippet buffered array.
+	        this._pushSnippetWindowBuffer();
+	        // clear calls in this instance
+	        this.calls = {};
+	    };
+	    PreInitMethodCallBuffer.prototype.toArray = function () {
+	        var _a;
+	        return (_a = []).concat.apply(_a, Object.values(this.calls));
+	    };
+	    /**
+	     * Fetch the buffered method calls from the window object,
+	     * normalize them, and use them to hydrate the buffer.
+	     * This removes existing buffered calls from the window object.
+	     */
+	    PreInitMethodCallBuffer.prototype._pushSnippetWindowBuffer = function () {
+	        var wa = (0, global_analytics_helper_1.getGlobalAnalytics)();
+	        if (!Array.isArray(wa))
+	            return undefined;
+	        var buffered = wa.splice(0, wa.length);
+	        var calls = buffered.map(function (_a) {
+	            var methodName = _a[0], args = _a.slice(1);
+	            return new PreInitMethodCall(methodName, args);
+	        });
+	        this.push.apply(this, calls);
+	    };
+	    return PreInitMethodCallBuffer;
+	}());
+	exports.PreInitMethodCallBuffer = PreInitMethodCallBuffer;
+	/**
+	 *  Call method and mark as "called"
+	 *  This function should never throw an error
+	 */
+	function callAnalyticsMethod(analytics, call) {
+	    return tslib_1.__awaiter(this, void 0, void 0, function () {
+	        var result, err_1;
+	        return tslib_1.__generator(this, function (_a) {
+	            switch (_a.label) {
+	                case 0:
+	                    _a.trys.push([0, 3, , 4]);
+	                    if (call.called) {
+	                        return [2 /*return*/, undefined];
+	                    }
+	                    call.called = true;
+	                    result = analytics[call.method].apply(analytics, call.args);
+	                    if (!(0, is_thenable_1.isThenable)(result)) return [3 /*break*/, 2];
+	                    // do not defer for non-async methods
+	                    return [4 /*yield*/, result];
+	                case 1:
+	                    // do not defer for non-async methods
+	                    _a.sent();
+	                    _a.label = 2;
+	                case 2:
+	                    call.resolve(result);
+	                    return [3 /*break*/, 4];
+	                case 3:
+	                    err_1 = _a.sent();
+	                    call.reject(err_1);
+	                    return [3 /*break*/, 4];
+	                case 4: return [2 /*return*/];
+	            }
+	        });
+	    });
+	}
+	exports.callAnalyticsMethod = callAnalyticsMethod;
+	var AnalyticsBuffered = /** @class */ (function () {
+	    function AnalyticsBuffered(loader) {
+	        var _this = this;
+	        this.trackSubmit = this._createMethod('trackSubmit');
+	        this.trackClick = this._createMethod('trackClick');
+	        this.trackLink = this._createMethod('trackLink');
+	        this.pageView = this._createMethod('pageview');
+	        this.identify = this._createMethod('identify');
+	        this.reset = this._createMethod('reset');
+	        this.group = this._createMethod('group');
+	        this.track = this._createMethod('track');
+	        this.ready = this._createMethod('ready');
+	        this.alias = this._createMethod('alias');
+	        this.debug = this._createChainableMethod('debug');
+	        this.page = this._createMethod('page');
+	        this.once = this._createChainableMethod('once');
+	        this.off = this._createChainableMethod('off');
+	        this.on = this._createChainableMethod('on');
+	        this.addSourceMiddleware = this._createMethod('addSourceMiddleware');
+	        this.setAnonymousId = this._createMethod('setAnonymousId');
+	        this.addDestinationMiddleware = this._createMethod('addDestinationMiddleware');
+	        this.screen = this._createMethod('screen');
+	        this.register = this._createMethod('register');
+	        this.deregister = this._createMethod('deregister');
+	        this.user = this._createMethod('user');
+	        this.VERSION = version_1.version;
+	        this._preInitBuffer = new PreInitMethodCallBuffer();
+	        this._promise = loader(this._preInitBuffer);
+	        this._promise
+	            .then(function (_a) {
+	            var ajs = _a[0], ctx = _a[1];
+	            _this.instance = ajs;
+	            _this.ctx = ctx;
+	        })
+	            .catch(function () {
+	            // intentionally do nothing...
+	            // this result of this promise will be caught by the 'catch' block on this class.
+	        });
+	    }
+	    AnalyticsBuffered.prototype.then = function () {
+	        var _a;
+	        var args = [];
+	        for (var _i = 0; _i < arguments.length; _i++) {
+	            args[_i] = arguments[_i];
+	        }
+	        return (_a = this._promise).then.apply(_a, args);
+	    };
+	    AnalyticsBuffered.prototype.catch = function () {
+	        var _a;
+	        var args = [];
+	        for (var _i = 0; _i < arguments.length; _i++) {
+	            args[_i] = arguments[_i];
+	        }
+	        return (_a = this._promise).catch.apply(_a, args);
+	    };
+	    AnalyticsBuffered.prototype.finally = function () {
+	        var _a;
+	        var args = [];
+	        for (var _i = 0; _i < arguments.length; _i++) {
+	            args[_i] = arguments[_i];
+	        }
+	        return (_a = this._promise).finally.apply(_a, args);
+	    };
+	    AnalyticsBuffered.prototype._createMethod = function (methodName) {
+	        var _this = this;
+	        return function () {
+	            var _a;
+	            var args = [];
+	            for (var _i = 0; _i < arguments.length; _i++) {
+	                args[_i] = arguments[_i];
+	            }
+	            if (_this.instance) {
+	                var result = (_a = _this.instance)[methodName].apply(_a, args);
+	                return Promise.resolve(result);
+	            }
+	            return new Promise(function (resolve, reject) {
+	                _this._preInitBuffer.push(new PreInitMethodCall(methodName, args, resolve, reject));
+	            });
+	        };
+	    };
+	    /**
+	     *  These are for methods that where determining when the method gets "flushed" is not important.
+	     *  These methods will resolve when analytics is fully initialized, and return type (other than Analytics)will not be available.
+	     */
+	    AnalyticsBuffered.prototype._createChainableMethod = function (methodName) {
+	        var _this = this;
+	        return function () {
+	            var _a;
+	            var args = [];
+	            for (var _i = 0; _i < arguments.length; _i++) {
+	                args[_i] = arguments[_i];
+	            }
+	            if (_this.instance) {
+	                void (_a = _this.instance)[methodName].apply(_a, args);
+	                return _this;
+	            }
+	            else {
+	                _this._preInitBuffer.push(new PreInitMethodCall(methodName, args));
+	            }
+	            return _this;
+	        };
+	    };
+	    return AnalyticsBuffered;
+	}());
+	exports.AnalyticsBuffered = AnalyticsBuffered;
+	
+} (buffer));
 
 var autoTrack = {};
 
@@ -5729,16 +6272,16 @@ toFacade$1.toFacade = toFacade;
 
 Object.defineProperty(middleware, "__esModule", { value: true });
 middleware.sourceMiddlewarePlugin = middleware.applyDestinationMiddleware = void 0;
-var tslib_1$8 = require$$0$2;
-var context_1$2 = context;
+var tslib_1$6 = require$$0$2;
+var context_1$3 = context;
 var to_facade_1$1 = toFacade$1;
 function applyDestinationMiddleware(destination, evt, middleware) {
-    return tslib_1$8.__awaiter(this, void 0, void 0, function () {
+    return tslib_1$6.__awaiter(this, void 0, void 0, function () {
         function applyMiddleware(event, fn) {
-            return tslib_1$8.__awaiter(this, void 0, void 0, function () {
+            return tslib_1$6.__awaiter(this, void 0, void 0, function () {
                 var nextCalled, returnedEvent;
                 var _a;
-                return tslib_1$8.__generator(this, function (_b) {
+                return tslib_1$6.__generator(this, function (_b) {
                     switch (_b.label) {
                         case 0:
                             nextCalled = false;
@@ -5763,7 +6306,7 @@ function applyDestinationMiddleware(destination, evt, middleware) {
                             _b.sent();
                             if (!nextCalled && returnedEvent !== null) {
                                 returnedEvent = returnedEvent;
-                                returnedEvent.integrations = tslib_1$8.__assign(tslib_1$8.__assign({}, event.integrations), (_a = {}, _a[destination] = false, _a));
+                                returnedEvent.integrations = tslib_1$6.__assign(tslib_1$6.__assign({}, event.integrations), (_a = {}, _a[destination] = false, _a));
                             }
                             return [2 /*return*/, returnedEvent];
                     }
@@ -5771,7 +6314,7 @@ function applyDestinationMiddleware(destination, evt, middleware) {
             });
         }
         var modifiedEvent, _i, middleware_1, md, result;
-        return tslib_1$8.__generator(this, function (_a) {
+        return tslib_1$6.__generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     modifiedEvent = (0, to_facade_1$1.toFacade)(evt, {
@@ -5802,9 +6345,9 @@ function applyDestinationMiddleware(destination, evt, middleware) {
 middleware.applyDestinationMiddleware = applyDestinationMiddleware;
 function sourceMiddlewarePlugin(fn, integrations) {
     function apply(ctx) {
-        return tslib_1$8.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$6.__awaiter(this, void 0, void 0, function () {
             var nextCalled;
-            return tslib_1$8.__generator(this, function (_a) {
+            return tslib_1$6.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         nextCalled = false;
@@ -5824,7 +6367,7 @@ function sourceMiddlewarePlugin(fn, integrations) {
                     case 1:
                         _a.sent();
                         if (!nextCalled) {
-                            throw new context_1$2.ContextCancelation({
+                            throw new context_1$3.ContextCancelation({
                                 retry: false,
                                 type: 'middleware_cancellation',
                                 reason: 'Middleware `next` function skipped',
@@ -5879,6 +6422,35 @@ function requirePickPrefix () {
 	pickPrefix.pickPrefix = pickPrefix$1;
 	
 	return pickPrefix;
+}
+
+var gracefulDecodeURIComponent = {};
+
+var hasRequiredGracefulDecodeURIComponent;
+
+function requireGracefulDecodeURIComponent () {
+	if (hasRequiredGracefulDecodeURIComponent) return gracefulDecodeURIComponent;
+	hasRequiredGracefulDecodeURIComponent = 1;
+	Object.defineProperty(gracefulDecodeURIComponent, "__esModule", { value: true });
+	gracefulDecodeURIComponent.gracefulDecodeURIComponent = void 0;
+	/**
+	 * Tries to gets the unencoded version of an encoded component of a
+	 * Uniform Resource Identifier (URI). If input string is malformed,
+	 * returns it back as-is.
+	 *
+	 * Note: All occurences of the `+` character become ` ` (spaces).
+	 **/
+	function gracefulDecodeURIComponent$1(encodedURIComponent) {
+	    try {
+	        return decodeURIComponent(encodedURIComponent.replace(/\+/g, ' '));
+	    }
+	    catch (_a) {
+	        return encodedURIComponent;
+	    }
+	}
+	gracefulDecodeURIComponent.gracefulDecodeURIComponent = gracefulDecodeURIComponent$1;
+	
+	return gracefulDecodeURIComponent;
 }
 
 var hasRequiredQueryString;
@@ -5937,20 +6509,24 @@ function requireQueryString () {
 }
 
 Object.defineProperty(analytics, "__esModule", { value: true });
-analytics.Analytics = void 0;
-var tslib_1$7 = require$$0$2;
+analytics.NullAnalytics = analytics.Analytics = void 0;
+var tslib_1$5 = require$$0$2;
 var arguments_resolver_1 = argumentsResolver;
 var connection_1$1 = connection;
-var context_1$1 = context;
+var context_1$2 = context;
 var analytics_core_1$1 = require$$5;
+var analytics_generic_utils_1$1 = require$$7;
 var events_1 = events;
 var event_queue_1 = eventQueue;
 var user_1 = user;
-var bind_all_1 = tslib_1$7.__importDefault(requireBindAll());
+var bind_all_1 = tslib_1$5.__importDefault(requireBindAll());
 var persisted_1$1 = persisted$1;
 var version_1$1 = version;
 var priority_queue_1$1 = priorityQueue;
 var get_global_1$1 = requireGetGlobal();
+var storage_1$1 = requireStorage();
+var global_analytics_helper_1$1 = globalAnalyticsHelper;
+var buffer_1$1 = buffer;
 var deprecationWarning = 'This is being deprecated and will be not be available in future releases of Analytics JS';
 // reference any pre-existing "analytics" object so a user can restore the reference
 var global$1 = (0, get_global_1$1.getGlobal)();
@@ -5958,7 +6534,7 @@ var _analytics = global$1 === null || global$1 === void 0 ? void 0 : global$1.an
 function createDefaultQueue(name, retryQueue, disablePersistance) {
     if (retryQueue === void 0) { retryQueue = false; }
     if (disablePersistance === void 0) { disablePersistance = false; }
-    var maxAttempts = retryQueue ? 4 : 1;
+    var maxAttempts = retryQueue ? 10 : 1;
     var priorityQueue = disablePersistance
         ? new priority_queue_1$1.PriorityQueue(maxAttempts, [])
         : new persisted_1$1.PersistedPriorityQueue(maxAttempts, name);
@@ -5969,7 +6545,7 @@ function _stub() {
     console.warn(deprecationWarning);
 }
 var Analytics = /** @class */ (function (_super) {
-    tslib_1$7.__extends(Analytics, _super);
+    tslib_1$5.__extends(Analytics, _super);
     function Analytics(settings, options, queue, user, group) {
         var _this = this;
         var _a, _b, _c;
@@ -5996,19 +6572,45 @@ var Analytics = /** @class */ (function (_super) {
         _this.settings.timeout = (_b = _this.settings.timeout) !== null && _b !== void 0 ? _b : 300;
         _this.queue =
             queue !== null && queue !== void 0 ? queue : createDefaultQueue("".concat(settings.writeKey, ":event-queue"), options === null || options === void 0 ? void 0 : options.retryQueue, disablePersistance);
-        _this._universalStorage = new user_1.UniversalStorage(disablePersistance ? ['memory'] : ['localStorage', 'cookie', 'memory'], (0, user_1.getAvailableStorageOptions)(cookieOptions));
+        var storageSetting = options === null || options === void 0 ? void 0 : options.storage;
+        _this._universalStorage = _this.createStore(disablePersistance, storageSetting, cookieOptions);
         _this._user =
-            user !== null && user !== void 0 ? user : new user_1.User(disablePersistance
-                ? tslib_1$7.__assign(tslib_1$7.__assign({}, options === null || options === void 0 ? void 0 : options.user), { persist: false }) : options === null || options === void 0 ? void 0 : options.user, cookieOptions).load();
+            user !== null && user !== void 0 ? user : new user_1.User(tslib_1$5.__assign({ persist: !disablePersistance, storage: options === null || options === void 0 ? void 0 : options.storage }, options === null || options === void 0 ? void 0 : options.user), cookieOptions).load();
         _this._group =
-            group !== null && group !== void 0 ? group : new user_1.Group(disablePersistance
-                ? tslib_1$7.__assign(tslib_1$7.__assign({}, options === null || options === void 0 ? void 0 : options.group), { persist: false }) : options === null || options === void 0 ? void 0 : options.group, cookieOptions).load();
+            group !== null && group !== void 0 ? group : new user_1.Group(tslib_1$5.__assign({ persist: !disablePersistance, storage: options === null || options === void 0 ? void 0 : options.storage }, options === null || options === void 0 ? void 0 : options.group), cookieOptions).load();
         _this.eventFactory = new events_1.EventFactory(_this._user);
         _this.integrations = (_c = options === null || options === void 0 ? void 0 : options.integrations) !== null && _c !== void 0 ? _c : {};
         _this.options = options !== null && options !== void 0 ? options : {};
         (0, bind_all_1.default)(_this);
         return _this;
     }
+    /**
+     * Creates the storage system based on the settings received
+     * @returns Storage
+     */
+    Analytics.prototype.createStore = function (disablePersistance, storageSetting, cookieOptions) {
+        // DisablePersistance option overrides all, no storage will be used outside of memory even if specified
+        if (disablePersistance) {
+            return new storage_1$1.UniversalStorage([new storage_1$1.MemoryStorage()]);
+        }
+        else {
+            if (storageSetting) {
+                if ((0, storage_1$1.isArrayOfStoreType)(storageSetting)) {
+                    // We will create the store with the priority for customer settings
+                    return new storage_1$1.UniversalStorage((0, storage_1$1.initializeStorages)((0, storage_1$1.applyCookieOptions)(storageSetting.stores, cookieOptions)));
+                }
+            }
+        }
+        // We default to our multi storage with priority
+        return new storage_1$1.UniversalStorage((0, storage_1$1.initializeStorages)([
+            storage_1$1.StoreType.LocalStorage,
+            {
+                name: storage_1$1.StoreType.Cookie,
+                settings: cookieOptions,
+            },
+            storage_1$1.StoreType.Memory,
+        ]));
+    };
     Object.defineProperty(Analytics.prototype, "storage", {
         get: function () {
             return this._universalStorage;
@@ -6021,12 +6623,13 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            var _a, name, data, opts, cb, segmentEvent;
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            var pageCtx, _a, name, data, opts, cb, segmentEvent;
             var _this = this;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
+                pageCtx = (0, buffer_1$1.popPageContext)(args);
                 _a = arguments_resolver_1.resolveArguments.apply(void 0, args), name = _a[0], data = _a[1], opts = _a[2], cb = _a[3];
-                segmentEvent = this.eventFactory.track(name, data, opts, this.integrations);
+                segmentEvent = this.eventFactory.track(name, data, opts, this.integrations, pageCtx);
                 return [2 /*return*/, this._dispatch(segmentEvent, cb).then(function (ctx) {
                         _this.emit('track', name, ctx.event.properties, ctx.event.options);
                         return ctx;
@@ -6039,12 +6642,13 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            var _a, category, page, properties, options, callback, segmentEvent;
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            var pageCtx, _a, category, page, properties, options, callback, segmentEvent;
             var _this = this;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
+                pageCtx = (0, buffer_1$1.popPageContext)(args);
                 _a = arguments_resolver_1.resolvePageArguments.apply(void 0, args), category = _a[0], page = _a[1], properties = _a[2], options = _a[3], callback = _a[4];
-                segmentEvent = this.eventFactory.page(category, page, properties, options, this.integrations);
+                segmentEvent = this.eventFactory.page(category, page, properties, options, this.integrations, pageCtx);
                 return [2 /*return*/, this._dispatch(segmentEvent, callback).then(function (ctx) {
                         _this.emit('page', category, page, ctx.event.properties, ctx.event.options);
                         return ctx;
@@ -6057,13 +6661,14 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            var _a, id, _traits, options, callback, segmentEvent;
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            var pageCtx, _a, id, _traits, options, callback, segmentEvent;
             var _this = this;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
+                pageCtx = (0, buffer_1$1.popPageContext)(args);
                 _a = (0, arguments_resolver_1.resolveUserArguments)(this._user).apply(void 0, args), id = _a[0], _traits = _a[1], options = _a[2], callback = _a[3];
                 this._user.identify(id, _traits);
-                segmentEvent = this.eventFactory.identify(this._user.id(), this._user.traits(), options, this.integrations);
+                segmentEvent = this.eventFactory.identify(this._user.id(), this._user.traits(), options, this.integrations, pageCtx);
                 return [2 /*return*/, this._dispatch(segmentEvent, callback).then(function (ctx) {
                         _this.emit('identify', ctx.event.userId, ctx.event.traits, ctx.event.options);
                         return ctx;
@@ -6077,6 +6682,7 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
+        var pageCtx = (0, buffer_1$1.popPageContext)(args);
         if (args.length === 0) {
             return this._group;
         }
@@ -6084,7 +6690,7 @@ var Analytics = /** @class */ (function (_super) {
         this._group.identify(id, _traits);
         var groupId = this._group.id();
         var groupTraits = this._group.traits();
-        var segmentEvent = this.eventFactory.group(groupId, groupTraits, options, this.integrations);
+        var segmentEvent = this.eventFactory.group(groupId, groupTraits, options, this.integrations, pageCtx);
         return this._dispatch(segmentEvent, callback).then(function (ctx) {
             _this.emit('group', ctx.event.groupId, ctx.event.traits, ctx.event.options);
             return ctx;
@@ -6095,12 +6701,13 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            var _a, to, from, options, callback, segmentEvent;
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            var pageCtx, _a, to, from, options, callback, segmentEvent;
             var _this = this;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
+                pageCtx = (0, buffer_1$1.popPageContext)(args);
                 _a = arguments_resolver_1.resolveAliasArguments.apply(void 0, args), to = _a[0], from = _a[1], options = _a[2], callback = _a[3];
-                segmentEvent = this.eventFactory.alias(to, from, options, this.integrations);
+                segmentEvent = this.eventFactory.alias(to, from, options, this.integrations, pageCtx);
                 return [2 /*return*/, this._dispatch(segmentEvent, callback).then(function (ctx) {
                         _this.emit('alias', to, from, ctx.event.options);
                         return ctx;
@@ -6113,12 +6720,13 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            var _a, category, page, properties, options, callback, segmentEvent;
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            var pageCtx, _a, category, page, properties, options, callback, segmentEvent;
             var _this = this;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
+                pageCtx = (0, buffer_1$1.popPageContext)(args);
                 _a = arguments_resolver_1.resolvePageArguments.apply(void 0, args), category = _a[0], page = _a[1], properties = _a[2], options = _a[3], callback = _a[4];
-                segmentEvent = this.eventFactory.screen(category, page, properties, options, this.integrations);
+                segmentEvent = this.eventFactory.screen(category, page, properties, options, this.integrations, pageCtx);
                 return [2 /*return*/, this._dispatch(segmentEvent, callback).then(function (ctx) {
                         _this.emit('screen', category, page, ctx.event.properties, ctx.event.options);
                         return ctx;
@@ -6131,15 +6739,15 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var autotrack;
             var _a;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$7.__importStar(requireAutoTrack()); })];
+                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$5.__importStar(requireAutoTrack()); })];
                     case 1:
                         autotrack = _b.sent();
-                        return [2 /*return*/, (_a = autotrack.link).call.apply(_a, tslib_1$7.__spreadArray([this], args, false))];
+                        return [2 /*return*/, (_a = autotrack.link).call.apply(_a, tslib_1$5.__spreadArray([this], args, false))];
                 }
             });
         });
@@ -6149,15 +6757,15 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var autotrack;
             var _a;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$7.__importStar(requireAutoTrack()); })];
+                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$5.__importStar(requireAutoTrack()); })];
                     case 1:
                         autotrack = _b.sent();
-                        return [2 /*return*/, (_a = autotrack.link).call.apply(_a, tslib_1$7.__spreadArray([this], args, false))];
+                        return [2 /*return*/, (_a = autotrack.link).call.apply(_a, tslib_1$5.__spreadArray([this], args, false))];
                 }
             });
         });
@@ -6167,15 +6775,15 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var autotrack;
             var _a;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$7.__importStar(requireAutoTrack()); })];
+                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$5.__importStar(requireAutoTrack()); })];
                     case 1:
                         autotrack = _b.sent();
-                        return [2 /*return*/, (_a = autotrack.form).call.apply(_a, tslib_1$7.__spreadArray([this], args, false))];
+                        return [2 /*return*/, (_a = autotrack.form).call.apply(_a, tslib_1$5.__spreadArray([this], args, false))];
                 }
             });
         });
@@ -6185,15 +6793,15 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var autotrack;
             var _a;
-            return tslib_1$7.__generator(this, function (_b) {
+            return tslib_1$5.__generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$7.__importStar(requireAutoTrack()); })];
+                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$5.__importStar(requireAutoTrack()); })];
                     case 1:
                         autotrack = _b.sent();
-                        return [2 /*return*/, (_a = autotrack.form).call.apply(_a, tslib_1$7.__spreadArray([this], args, false))];
+                        return [2 /*return*/, (_a = autotrack.form).call.apply(_a, tslib_1$5.__spreadArray([this], args, false))];
                 }
             });
         });
@@ -6203,13 +6811,13 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             plugins[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var ctx, registrations;
             var _this = this;
-            return tslib_1$7.__generator(this, function (_a) {
+            return tslib_1$5.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        ctx = context_1$1.Context.system();
+                        ctx = context_1$2.Context.system();
                         registrations = plugins.map(function (xt) {
                             return _this.queue.register(ctx, xt, _this);
                         });
@@ -6226,13 +6834,13 @@ var Analytics = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             plugins[_i] = arguments[_i];
         }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var ctx, deregistrations;
             var _this = this;
-            return tslib_1$7.__generator(this, function (_a) {
+            return tslib_1$5.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        ctx = context_1$1.Context.system();
+                        ctx = context_1$2.Context.system();
                         deregistrations = plugins.map(function (pl) {
                             var plugin = _this.queue.plugins.find(function (p) { return p.name === pl; });
                             if (plugin) {
@@ -6267,10 +6875,10 @@ var Analytics = /** @class */ (function (_super) {
         this.settings.timeout = timeout;
     };
     Analytics.prototype._dispatch = function (event, callback) {
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var ctx;
-            return tslib_1$7.__generator(this, function (_a) {
-                ctx = new context_1$1.Context(event);
+            return tslib_1$5.__generator(this, function (_a) {
+                ctx = new context_1$2.Context(event);
                 if ((0, connection_1$1.isOffline)() && !this.options.retryQueue) {
                     return [2 /*return*/, ctx];
                 }
@@ -6283,15 +6891,15 @@ var Analytics = /** @class */ (function (_super) {
         });
     };
     Analytics.prototype.addSourceMiddleware = function (fn) {
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var _this = this;
-            return tslib_1$7.__generator(this, function (_a) {
+            return tslib_1$5.__generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.queue.criticalTasks.run(function () { return tslib_1$7.__awaiter(_this, void 0, void 0, function () {
+                    case 0: return [4 /*yield*/, this.queue.criticalTasks.run(function () { return tslib_1$5.__awaiter(_this, void 0, void 0, function () {
                             var sourceMiddlewarePlugin, integrations, plugin;
-                            return tslib_1$7.__generator(this, function (_a) {
+                            return tslib_1$5.__generator(this, function (_a) {
                                 switch (_a.label) {
-                                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$7.__importStar(middleware); })];
+                                    case 0: return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$5.__importStar(middleware); })];
                                     case 1:
                                         sourceMiddlewarePlugin = (_a.sent()).sourceMiddlewarePlugin;
                                         integrations = {};
@@ -6331,15 +6939,15 @@ var Analytics = /** @class */ (function (_super) {
         return this._user.anonymousId(id);
     };
     Analytics.prototype.queryString = function (query) {
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
             var queryString;
-            return tslib_1$7.__generator(this, function (_a) {
+            return tslib_1$5.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.options.useQueryString === false) {
                             return [2 /*return*/, []];
                         }
-                        return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$7.__importStar(requireQueryString()); })];
+                        return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1$5.__importStar(requireQueryString()); })];
                     case 1:
                         queryString = (_a.sent()).queryString;
                         return [2 /*return*/, queryString(this, query)];
@@ -6361,8 +6969,8 @@ var Analytics = /** @class */ (function (_super) {
     };
     Analytics.prototype.ready = function (callback) {
         if (callback === void 0) { callback = function (res) { return res; }; }
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            return tslib_1$7.__generator(this, function (_a) {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            return tslib_1$5.__generator(this, function (_a) {
                 return [2 /*return*/, Promise.all(this.queue.plugins.map(function (i) { return (i.ready ? i.ready() : Promise.resolve()); })).then(function (res) {
                         callback(res);
                         return res;
@@ -6373,7 +6981,7 @@ var Analytics = /** @class */ (function (_super) {
     // analytics-classic api
     Analytics.prototype.noConflict = function () {
         console.warn(deprecationWarning);
-        window.analytics = _analytics !== null && _analytics !== void 0 ? _analytics : this;
+        (0, global_analytics_helper_1$1.setGlobalAnalytics)(_analytics !== null && _analytics !== void 0 ? _analytics : this);
         return this;
     };
     Analytics.prototype.normalize = function (msg) {
@@ -6397,16 +7005,16 @@ var Analytics = /** @class */ (function (_super) {
     });
     /* @deprecated - noop */
     Analytics.prototype.initialize = function (_settings, _options) {
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            return tslib_1$7.__generator(this, function (_a) {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            return tslib_1$5.__generator(this, function (_a) {
                 console.warn(deprecationWarning);
                 return [2 /*return*/, Promise.resolve(this)];
             });
         });
     };
     Analytics.prototype.pageview = function (url) {
-        return tslib_1$7.__awaiter(this, void 0, void 0, function () {
-            return tslib_1$7.__generator(this, function (_a) {
+        return tslib_1$5.__awaiter(this, void 0, void 0, function () {
+            return tslib_1$5.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         console.warn(deprecationWarning);
@@ -6470,14 +7078,27 @@ var Analytics = /** @class */ (function (_super) {
         an[method].apply(this, args);
     };
     return Analytics;
-}(analytics_core_1$1.Emitter));
+}(analytics_generic_utils_1$1.Emitter));
 analytics.Analytics = Analytics;
+/**
+ * @returns a no-op analytics instance that does not create cookies or localstorage, or send any events to segment.
+ */
+var NullAnalytics = /** @class */ (function (_super) {
+    tslib_1$5.__extends(NullAnalytics, _super);
+    function NullAnalytics() {
+        var _this = _super.call(this, { writeKey: '' }, { disableClientPersistence: true }) || this;
+        _this.initialized = true;
+        return _this;
+    }
+    return NullAnalytics;
+}(Analytics));
+analytics.NullAnalytics = NullAnalytics;
 
 var mergedOptions$1 = {};
 
 Object.defineProperty(mergedOptions$1, "__esModule", { value: true });
 mergedOptions$1.mergedOptions = void 0;
-var tslib_1$6 = require$$0$2;
+var tslib_1$4 = require$$0$2;
 /**
  * Merge legacy settings and initialized Integration option overrides.
  *
@@ -6493,144 +7114,229 @@ function mergedOptions(settings, options) {
         var _b, _c;
         var integration = _a[0], options = _a[1];
         if (typeof options === 'object') {
-            return tslib_1$6.__assign(tslib_1$6.__assign({}, overrides), (_b = {}, _b[integration] = options, _b));
+            return tslib_1$4.__assign(tslib_1$4.__assign({}, overrides), (_b = {}, _b[integration] = options, _b));
         }
-        return tslib_1$6.__assign(tslib_1$6.__assign({}, overrides), (_c = {}, _c[integration] = {}, _c));
+        return tslib_1$4.__assign(tslib_1$4.__assign({}, overrides), (_c = {}, _c[integration] = {}, _c));
     }, {});
     return Object.entries(settings.integrations).reduce(function (integrationSettings, _a) {
         var _b;
         var integration = _a[0], settings = _a[1];
-        return tslib_1$6.__assign(tslib_1$6.__assign({}, integrationSettings), (_b = {}, _b[integration] = tslib_1$6.__assign(tslib_1$6.__assign({}, settings), optionOverrides[integration]), _b));
+        return tslib_1$4.__assign(tslib_1$4.__assign({}, integrationSettings), (_b = {}, _b[integration] = tslib_1$4.__assign(tslib_1$4.__assign({}, settings), optionOverrides[integration]), _b));
     }, {});
 }
 mergedOptions$1.mergedOptions = mergedOptions;
 
-var createDeferred$1 = {};
+var envEnrichment = {};
 
-Object.defineProperty(createDeferred$1, "__esModule", { value: true });
-createDeferred$1.createDeferred = void 0;
-/**
- * Return a promise that can be externally resolved
- */
-var createDeferred = function () {
-    var resolve;
-    var reject;
-    var promise = new Promise(function (_resolve, _reject) {
-        resolve = _resolve;
-        reject = _reject;
-    });
-    return {
-        resolve: resolve,
-        reject: reject,
-        promise: promise,
+var clientHints = {};
+
+var hasRequiredClientHints;
+
+function requireClientHints () {
+	if (hasRequiredClientHints) return clientHints;
+	hasRequiredClientHints = 1;
+	Object.defineProperty(clientHints, "__esModule", { value: true });
+	clientHints.clientHints = void 0;
+	var tslib_1 = require$$0$2;
+	function clientHints$1(hints) {
+	    return tslib_1.__awaiter(this, void 0, void 0, function () {
+	        var userAgentData;
+	        return tslib_1.__generator(this, function (_a) {
+	            userAgentData = navigator.userAgentData;
+	            if (!userAgentData)
+	                return [2 /*return*/, undefined];
+	            if (!hints)
+	                return [2 /*return*/, userAgentData.toJSON()];
+	            return [2 /*return*/, userAgentData
+	                    .getHighEntropyValues(hints)
+	                    .catch(function () { return userAgentData.toJSON(); })];
+	        });
+	    });
+	}
+	clientHints.clientHints = clientHints$1;
+	
+	return clientHints;
+}
+
+Object.defineProperty(envEnrichment, "__esModule", { value: true });
+envEnrichment.envEnrichment = envEnrichment.ampId = envEnrichment.utm = void 0;
+var tslib_1$3 = require$$0$2;
+var js_cookie_1 = tslib_1$3.__importDefault(requireJs_cookie());
+var version_1 = version;
+var version_type_1 = requireVersionType();
+var tld_1 = requireTld();
+var gracefulDecodeURIComponent_1 = requireGracefulDecodeURIComponent();
+var storage_1 = requireStorage();
+var client_hints_1 = requireClientHints();
+var cookieOptions;
+function getCookieOptions() {
+    if (cookieOptions) {
+        return cookieOptions;
+    }
+    var domain = (0, tld_1.tld)(window.location.href);
+    cookieOptions = {
+        expires: 31536000000,
+        secure: false,
+        path: '/',
     };
-};
-createDeferred$1.createDeferred = createDeferred;
-
-var pageEnrichment = {};
-
-var pick$1 = {};
-
-Object.defineProperty(pick$1, "__esModule", { value: true });
-pick$1.pick = void 0;
-var tslib_1$5 = require$$0$2;
-/**
- * @example
- * pick({ 'a': 1, 'b': '2', 'c': 3 }, ['a', 'c'])
- * => { 'a': 1, 'c': 3 }
- */
-var pick = function (object, keys) {
-    return Object.assign.apply(Object, tslib_1$5.__spreadArray([{}], keys.map(function (key) {
-        var _a;
-        if (object && Object.prototype.hasOwnProperty.call(object, key)) {
-            return _a = {}, _a[key] = object[key], _a;
+    if (domain) {
+        cookieOptions.domain = domain;
+    }
+    return cookieOptions;
+}
+function ads(query) {
+    var queryIds = {
+        btid: 'dataxu',
+        urid: 'millennial-media',
+    };
+    if (query.startsWith('?')) {
+        query = query.substring(1);
+    }
+    query = query.replace(/\?/g, '&');
+    var parts = query.split('&');
+    for (var _i = 0, parts_1 = parts; _i < parts_1.length; _i++) {
+        var part = parts_1[_i];
+        var _a = part.split('='), k = _a[0], v = _a[1];
+        if (queryIds[k]) {
+            return {
+                id: v,
+                type: queryIds[k],
+            };
         }
-    }), false));
-};
-pick$1.pick = pick;
-
-Object.defineProperty(pageEnrichment, "__esModule", { value: true });
-pageEnrichment.pageEnrichment = pageEnrichment.pageDefaults = pageEnrichment.canonicalUrl = void 0;
-var tslib_1$4 = require$$0$2;
-var pick_1 = pick$1;
-/**
- * Get the current page's canonical URL.
- */
-function canonical() {
-    var canon = document.querySelector("link[rel='canonical']");
-    if (canon) {
-        return canon.getAttribute('href') || undefined;
     }
 }
-/**
- * Return the canonical path for the page.
- */
-function canonicalPath() {
-    var canon = canonical();
-    if (!canon) {
-        return window.location.pathname;
+function utm(query) {
+    if (query.startsWith('?')) {
+        query = query.substring(1);
     }
-    var a = document.createElement('a');
-    a.href = canon;
-    var pathname = !a.pathname.startsWith('/') ? '/' + a.pathname : a.pathname;
-    return pathname;
+    query = query.replace(/\?/g, '&');
+    return query.split('&').reduce(function (acc, str) {
+        var _a = str.split('='), k = _a[0], _b = _a[1], v = _b === void 0 ? '' : _b;
+        if (k.includes('utm_') && k.length > 4) {
+            var utmParam = k.slice(4);
+            if (utmParam === 'campaign') {
+                utmParam = 'name';
+            }
+            acc[utmParam] = (0, gracefulDecodeURIComponent_1.gracefulDecodeURIComponent)(v);
+        }
+        return acc;
+    }, {});
+}
+envEnrichment.utm = utm;
+function ampId() {
+    var ampId = js_cookie_1.default.get('_ga');
+    if (ampId && ampId.startsWith('amp')) {
+        return ampId;
+    }
+}
+envEnrichment.ampId = ampId;
+function referrerId(query, ctx, disablePersistance) {
+    var _a;
+    var storage = new storage_1.UniversalStorage(disablePersistance ? [] : [new storage_1.CookieStorage(getCookieOptions())]);
+    var stored = storage.get('s:context.referrer');
+    var ad = (_a = ads(query)) !== null && _a !== void 0 ? _a : stored;
+    if (!ad) {
+        return;
+    }
+    if (ctx) {
+        ctx.referrer = tslib_1$3.__assign(tslib_1$3.__assign({}, ctx.referrer), ad);
+    }
+    storage.set('s:context.referrer', ad);
 }
 /**
- * Return the canonical URL for the page concat the given `search`
- * and strip the hash.
- */
-function canonicalUrl(search) {
-    if (search === void 0) { search = ''; }
-    var canon = canonical();
-    if (canon) {
-        return canon.includes('?') ? canon : "".concat(canon).concat(search);
-    }
-    var url = window.location.href;
-    var i = url.indexOf('#');
-    return i === -1 ? url : url.slice(0, i);
-}
-pageEnrichment.canonicalUrl = canonicalUrl;
-/**
- * Return a default `options.context.page` object.
  *
- * https://segment.com/docs/spec/page/#properties
+ * @param obj e.g. { foo: 'b', bar: 'd', baz: ['123', '456']}
+ * @returns e.g. 'foo=b&bar=d&baz=123&baz=456'
  */
-function pageDefaults() {
-    return {
-        path: canonicalPath(),
-        referrer: document.referrer,
-        search: location.search,
-        title: document.title,
-        url: canonicalUrl(location.search),
-    };
-}
-pageEnrichment.pageDefaults = pageDefaults;
-function enrichPageContext(ctx) {
-    var event = ctx.event;
-    event.context = event.context || {};
-    var defaultPageContext = pageDefaults();
-    var pageContextFromEventProps = undefined;
-    if (event.type === 'page') {
-        pageContextFromEventProps =
-            event.properties &&
-                (0, pick_1.pick)(event.properties, Object.keys(defaultPageContext));
-        event.properties = tslib_1$4.__assign(tslib_1$4.__assign(tslib_1$4.__assign({}, defaultPageContext), event.properties), (event.name ? { name: event.name } : {}));
+var objectToQueryString = function (obj) {
+    try {
+        var searchParams_1 = new URLSearchParams();
+        Object.entries(obj).forEach(function (_a) {
+            var k = _a[0], v = _a[1];
+            if (Array.isArray(v)) {
+                v.forEach(function (value) { return searchParams_1.append(k, value); });
+            }
+            else {
+                searchParams_1.append(k, v);
+            }
+        });
+        return searchParams_1.toString();
     }
-    event.context.page = tslib_1$4.__assign(tslib_1$4.__assign(tslib_1$4.__assign({}, defaultPageContext), pageContextFromEventProps), event.context.page);
-    return ctx;
-}
-pageEnrichment.pageEnrichment = {
-    name: 'Page Enrichment',
-    version: '0.1.0',
-    isLoaded: function () { return true; },
-    load: function () { return Promise.resolve(); },
-    type: 'before',
-    page: enrichPageContext,
-    alias: enrichPageContext,
-    track: enrichPageContext,
-    identify: enrichPageContext,
-    group: enrichPageContext,
+    catch (_a) {
+        return '';
+    }
 };
+var EnvironmentEnrichmentPlugin = /** @class */ (function () {
+    function EnvironmentEnrichmentPlugin() {
+        var _this = this;
+        this.name = 'Page Enrichment';
+        this.type = 'before';
+        this.version = '0.1.0';
+        this.isLoaded = function () { return true; };
+        this.load = function (_ctx, instance) { return tslib_1$3.__awaiter(_this, void 0, void 0, function () {
+            var _a;
+            return tslib_1$3.__generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        this.instance = instance;
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
+                        _a = this;
+                        return [4 /*yield*/, (0, client_hints_1.clientHints)(this.instance.options.highEntropyValuesClientHints)];
+                    case 2:
+                        _a.userAgentData = _b.sent();
+                        return [3 /*break*/, 4];
+                    case 3:
+                        _b.sent();
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/, Promise.resolve()];
+                }
+            });
+        }); };
+        this.enrich = function (ctx) {
+            var _a, _b;
+            // Note: Types are off - context should never be undefined here, since it is set as part of event creation.
+            var evtCtx = ctx.event.context;
+            var search = evtCtx.page.search || '';
+            var query = typeof search === 'object' ? objectToQueryString(search) : search;
+            evtCtx.userAgent = navigator.userAgent;
+            evtCtx.userAgentData = _this.userAgentData;
+            // @ts-ignore
+            var locale = navigator.userLanguage || navigator.language;
+            if (typeof evtCtx.locale === 'undefined' && typeof locale !== 'undefined') {
+                evtCtx.locale = locale;
+            }
+            (_a = evtCtx.library) !== null && _a !== void 0 ? _a : (evtCtx.library = {
+                name: 'analytics.js',
+                version: "".concat((0, version_type_1.getVersionType)() === 'web' ? 'next' : 'npm:next', "-").concat(version_1.version),
+            });
+            if (query && !evtCtx.campaign) {
+                evtCtx.campaign = utm(query);
+            }
+            var amp = ampId();
+            if (amp) {
+                evtCtx.amp = { id: amp };
+            }
+            referrerId(query, evtCtx, (_b = _this.instance.options.disableClientPersistence) !== null && _b !== void 0 ? _b : false);
+            try {
+                evtCtx.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            }
+            catch (_) {
+                // If browser doesn't have support leave timezone undefined
+            }
+            return ctx;
+        };
+        this.track = this.enrich;
+        this.identify = this.enrich;
+        this.page = this.enrich;
+        this.group = this.enrich;
+        this.alias = this.enrich;
+        this.screen = this.enrich;
+    }
+    return EnvironmentEnrichmentPlugin;
+}());
+envEnrichment.envEnrichment = new EnvironmentEnrichmentPlugin();
 
 var remoteLoader$1 = {};
 
@@ -6691,13 +7397,28 @@ function unloadScript(src) {
 }
 loadScript$1.unloadScript = unloadScript;
 
+var metricHelpers = {};
+
+Object.defineProperty(metricHelpers, "__esModule", { value: true });
+metricHelpers.recordIntegrationMetric = void 0;
+function recordIntegrationMetric(ctx, _a) {
+    var methodName = _a.methodName, integrationName = _a.integrationName, type = _a.type, _b = _a.didError, didError = _b === void 0 ? false : _b;
+    ctx.stats.increment("analytics_js.integration.invoke".concat(didError ? '.error' : ''), 1, [
+        "method:".concat(methodName),
+        "integration_name:".concat(integrationName),
+        "type:".concat(type),
+    ]);
+}
+metricHelpers.recordIntegrationMetric = recordIntegrationMetric;
+
 Object.defineProperty(remoteLoader$1, "__esModule", { value: true });
 remoteLoader$1.remoteLoader = remoteLoader$1.ActionDestination = void 0;
-var tslib_1$3 = require$$0$2;
+var tslib_1$2 = require$$0$2;
 var load_script_1 = loadScript$1;
 var parse_cdn_1$1 = parseCdn;
 var middleware_1 = middleware;
-var context_1 = context;
+var context_1$1 = context;
+var metric_helpers_1 = metricHelpers;
 var ActionDestination = /** @class */ (function () {
     function ActionDestination(name, action) {
         this.version = '1.0.0';
@@ -6725,29 +7446,29 @@ var ActionDestination = /** @class */ (function () {
         }
     };
     ActionDestination.prototype.transform = function (ctx) {
-        return tslib_1$3.__awaiter(this, void 0, void 0, function () {
+        return tslib_1$2.__awaiter(this, void 0, void 0, function () {
             var modifiedEvent;
-            return tslib_1$3.__generator(this, function (_a) {
+            return tslib_1$2.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, (0, middleware_1.applyDestinationMiddleware)(this.name, ctx.event, this.middleware)];
                     case 1:
                         modifiedEvent = _a.sent();
                         if (modifiedEvent === null) {
-                            ctx.cancel(new context_1.ContextCancelation({
+                            ctx.cancel(new context_1$1.ContextCancelation({
                                 retry: false,
                                 reason: 'dropped by destination middleware',
                             }));
                         }
-                        return [2 /*return*/, new context_1.Context(modifiedEvent)];
+                        return [2 /*return*/, new context_1$1.Context(modifiedEvent)];
                 }
             });
         });
     };
     ActionDestination.prototype._createMethod = function (methodName) {
         var _this = this;
-        return function (ctx) { return tslib_1$3.__awaiter(_this, void 0, void 0, function () {
-            var transformedContext;
-            return tslib_1$3.__generator(this, function (_a) {
+        return function (ctx) { return tslib_1$2.__awaiter(_this, void 0, void 0, function () {
+            var transformedContext, error_1;
+            return tslib_1$2.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.action[methodName])
@@ -6758,10 +7479,27 @@ var ActionDestination = /** @class */ (function () {
                     case 1:
                         transformedContext = _a.sent();
                         _a.label = 2;
-                    case 2: return [4 /*yield*/, this.action[methodName](transformedContext)];
+                    case 2:
+                        _a.trys.push([2, 4, , 5]);
+                        (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+                            integrationName: this.action.name,
+                            methodName: methodName,
+                            type: 'action',
+                        });
+                        return [4 /*yield*/, this.action[methodName](transformedContext)];
                     case 3:
                         _a.sent();
-                        return [2 /*return*/, ctx];
+                        return [3 /*break*/, 5];
+                    case 4:
+                        error_1 = _a.sent();
+                        (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+                            integrationName: this.action.name,
+                            methodName: methodName,
+                            type: 'action',
+                            didError: true,
+                        });
+                        throw error_1;
+                    case 5: return [2 /*return*/, ctx];
                 }
             });
         }); };
@@ -6774,7 +7512,32 @@ var ActionDestination = /** @class */ (function () {
         return this.action.ready ? this.action.ready() : Promise.resolve();
     };
     ActionDestination.prototype.load = function (ctx, analytics) {
-        return this.action.load(ctx, analytics);
+        return tslib_1$2.__awaiter(this, void 0, void 0, function () {
+            var error_2;
+            return tslib_1$2.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+                            integrationName: this.action.name,
+                            methodName: 'load',
+                            type: 'action',
+                        });
+                        return [4 /*yield*/, this.action.load(ctx, analytics)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                    case 2:
+                        error_2 = _a.sent();
+                        (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+                            integrationName: this.action.name,
+                            methodName: 'load',
+                            type: 'action',
+                            didError: true,
+                        });
+                        throw error_2;
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
     };
     ActionDestination.prototype.unload = function (ctx, analytics) {
         var _a, _b;
@@ -6813,61 +7576,86 @@ function isPluginDisabled(userIntegrations, remotePlugin) {
     }
     return false;
 }
-function remoteLoader(settings, userIntegrations, mergedIntegrations, obfuscate, routingMiddleware) {
+function loadPluginFactory(remotePlugin, obfuscate) {
+    return tslib_1$2.__awaiter(this, void 0, void 0, function () {
+        var defaultCdn, cdn, urlSplit, name_1, obfuscatedURL;
+        return tslib_1$2.__generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    defaultCdn = new RegExp('https://cdn.segment.(com|build)');
+                    cdn = (0, parse_cdn_1$1.getCDN)();
+                    if (!obfuscate) return [3 /*break*/, 6];
+                    urlSplit = remotePlugin.url.split('/');
+                    name_1 = urlSplit[urlSplit.length - 2];
+                    obfuscatedURL = remotePlugin.url.replace(name_1, btoa(name_1).replace(/=/g, ''));
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 5]);
+                    return [4 /*yield*/, (0, load_script_1.loadScript)(obfuscatedURL.replace(defaultCdn, cdn))];
+                case 2:
+                    _a.sent();
+                    return [3 /*break*/, 5];
+                case 3:
+                    _a.sent();
+                    // Due to syncing concerns it is possible that the obfuscated action destination (or requested version) might not exist.
+                    // We should use the unobfuscated version as a fallback.
+                    return [4 /*yield*/, (0, load_script_1.loadScript)(remotePlugin.url.replace(defaultCdn, cdn))];
+                case 4:
+                    // Due to syncing concerns it is possible that the obfuscated action destination (or requested version) might not exist.
+                    // We should use the unobfuscated version as a fallback.
+                    _a.sent();
+                    return [3 /*break*/, 5];
+                case 5: return [3 /*break*/, 8];
+                case 6: return [4 /*yield*/, (0, load_script_1.loadScript)(remotePlugin.url.replace(defaultCdn, cdn))];
+                case 7:
+                    _a.sent();
+                    _a.label = 8;
+                case 8:
+                    // @ts-expect-error
+                    if (typeof window[remotePlugin.libraryName] === 'function') {
+                        // @ts-expect-error
+                        return [2 /*return*/, window[remotePlugin.libraryName]];
+                    }
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function remoteLoader(settings, userIntegrations, mergedIntegrations, obfuscate, routingMiddleware, pluginSources) {
     var _a, _b, _c;
-    return tslib_1$3.__awaiter(this, void 0, void 0, function () {
-        var allPlugins, cdn, routingRules, pluginPromises;
+    return tslib_1$2.__awaiter(this, void 0, void 0, function () {
+        var allPlugins, routingRules, pluginPromises;
         var _this = this;
-        return tslib_1$3.__generator(this, function (_d) {
+        return tslib_1$2.__generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
                     allPlugins = [];
-                    cdn = (0, parse_cdn_1$1.getCDN)();
                     routingRules = (_b = (_a = settings.middlewareSettings) === null || _a === void 0 ? void 0 : _a.routingRules) !== null && _b !== void 0 ? _b : [];
-                    pluginPromises = ((_c = settings.remotePlugins) !== null && _c !== void 0 ? _c : []).map(function (remotePlugin) { return tslib_1$3.__awaiter(_this, void 0, void 0, function () {
-                        var defaultCdn, urlSplit, name_1, obfuscatedURL, libraryName, pluginFactory, plugin, plugins, routing_1, error_2;
-                        return tslib_1$3.__generator(this, function (_a) {
-                            switch (_a.label) {
+                    pluginPromises = ((_c = settings.remotePlugins) !== null && _c !== void 0 ? _c : []).map(function (remotePlugin) { return tslib_1$2.__awaiter(_this, void 0, void 0, function () {
+                        var pluginFactory, _a, plugin, plugins, routing_1, error_4;
+                        return tslib_1$2.__generator(this, function (_b) {
+                            switch (_b.label) {
                                 case 0:
                                     if (isPluginDisabled(userIntegrations, remotePlugin))
                                         return [2 /*return*/];
-                                    _a.label = 1;
+                                    _b.label = 1;
                                 case 1:
-                                    _a.trys.push([1, 12, , 13]);
-                                    defaultCdn = new RegExp('https://cdn.segment.(com|build)');
-                                    if (!obfuscate) return [3 /*break*/, 7];
-                                    urlSplit = remotePlugin.url.split('/');
-                                    name_1 = urlSplit[urlSplit.length - 2];
-                                    obfuscatedURL = remotePlugin.url.replace(name_1, btoa(name_1).replace(/=/g, ''));
-                                    _a.label = 2;
+                                    _b.trys.push([1, 6, , 7]);
+                                    _a = (pluginSources === null || pluginSources === void 0 ? void 0 : pluginSources.find(function (_a) {
+                                        var pluginName = _a.pluginName;
+                                        return pluginName === remotePlugin.name;
+                                    }));
+                                    if (_a) return [3 /*break*/, 3];
+                                    return [4 /*yield*/, loadPluginFactory(remotePlugin, obfuscate)];
                                 case 2:
-                                    _a.trys.push([2, 4, , 6]);
-                                    return [4 /*yield*/, (0, load_script_1.loadScript)(obfuscatedURL.replace(defaultCdn, cdn))];
+                                    _a = (_b.sent());
+                                    _b.label = 3;
                                 case 3:
-                                    _a.sent();
-                                    return [3 /*break*/, 6];
+                                    pluginFactory = _a;
+                                    if (!pluginFactory) return [3 /*break*/, 5];
+                                    return [4 /*yield*/, pluginFactory(tslib_1$2.__assign(tslib_1$2.__assign({}, remotePlugin.settings), mergedIntegrations[remotePlugin.name]))];
                                 case 4:
-                                    _a.sent();
-                                    // Due to syncing concerns it is possible that the obfuscated action destination (or requested version) might not exist.
-                                    // We should use the unobfuscated version as a fallback.
-                                    return [4 /*yield*/, (0, load_script_1.loadScript)(remotePlugin.url.replace(defaultCdn, cdn))];
-                                case 5:
-                                    // Due to syncing concerns it is possible that the obfuscated action destination (or requested version) might not exist.
-                                    // We should use the unobfuscated version as a fallback.
-                                    _a.sent();
-                                    return [3 /*break*/, 6];
-                                case 6: return [3 /*break*/, 9];
-                                case 7: return [4 /*yield*/, (0, load_script_1.loadScript)(remotePlugin.url.replace(defaultCdn, cdn))];
-                                case 8:
-                                    _a.sent();
-                                    _a.label = 9;
-                                case 9:
-                                    libraryName = remotePlugin.libraryName;
-                                    if (!(typeof window[libraryName] === 'function')) return [3 /*break*/, 11];
-                                    pluginFactory = window[libraryName];
-                                    return [4 /*yield*/, pluginFactory(tslib_1$3.__assign(tslib_1$3.__assign({}, remotePlugin.settings), mergedIntegrations[remotePlugin.name]))];
-                                case 10:
-                                    plugin = _a.sent();
+                                    plugin = _b.sent();
                                     plugins = Array.isArray(plugin) ? plugin : [plugin];
                                     validate$1(plugins);
                                     routing_1 = routingRules.filter(function (rule) { return rule.destinationName === remotePlugin.creationName; });
@@ -6881,13 +7669,13 @@ function remoteLoader(settings, userIntegrations, mergedIntegrations, obfuscate,
                                         }
                                         allPlugins.push(wrapper);
                                     });
-                                    _a.label = 11;
-                                case 11: return [3 /*break*/, 13];
-                                case 12:
-                                    error_2 = _a.sent();
-                                    console.warn('Failed to load Remote Plugin', error_2);
-                                    return [3 /*break*/, 13];
-                                case 13: return [2 /*return*/];
+                                    _b.label = 5;
+                                case 5: return [3 /*break*/, 7];
+                                case 6:
+                                    error_4 = _b.sent();
+                                    console.warn('Failed to load Remote Plugin', error_4);
+                                    return [3 /*break*/, 7];
+                                case 7: return [2 /*return*/];
                             }
                         });
                     }); });
@@ -7094,6 +7882,68 @@ function requireFetchDispatcher () {
 	return fetchDispatcher;
 }
 
+var normalize = {};
+
+var hasRequiredNormalize;
+
+function requireNormalize () {
+	if (hasRequiredNormalize) return normalize;
+	hasRequiredNormalize = 1;
+	Object.defineProperty(normalize, "__esModule", { value: true });
+	normalize.normalize = void 0;
+	var tslib_1 = require$$0$2;
+	function normalize$1(analytics, json, settings, integrations) {
+	    var _a;
+	    var user = analytics.user();
+	    delete json.options;
+	    json.writeKey = settings === null || settings === void 0 ? void 0 : settings.apiKey;
+	    json.userId = json.userId || user.id();
+	    json.anonymousId = json.anonymousId || user.anonymousId();
+	    json.sentAt = new Date();
+	    var failed = analytics.queue.failedInitializations || [];
+	    if (failed.length > 0) {
+	        json._metadata = { failedInitializations: failed };
+	    }
+	    var bundled = [];
+	    var unbundled = [];
+	    for (var key in integrations) {
+	        var integration = integrations[key];
+	        if (key === 'Segment.io') {
+	            bundled.push(key);
+	        }
+	        if (integration.bundlingStatus === 'bundled') {
+	            bundled.push(key);
+	        }
+	        if (integration.bundlingStatus === 'unbundled') {
+	            unbundled.push(key);
+	        }
+	    }
+	    // This will make sure that the disabled cloud mode destinations will be
+	    // included in the unbundled list.
+	    for (var _i = 0, _b = (settings === null || settings === void 0 ? void 0 : settings.unbundledIntegrations) || []; _i < _b.length; _i++) {
+	        var settingsUnbundled = _b[_i];
+	        if (!unbundled.includes(settingsUnbundled)) {
+	            unbundled.push(settingsUnbundled);
+	        }
+	    }
+	    var configIds = (_a = settings === null || settings === void 0 ? void 0 : settings.maybeBundledConfigIds) !== null && _a !== void 0 ? _a : {};
+	    var bundledConfigIds = [];
+	    bundled.sort().forEach(function (name) {
+	        var _a;
+	        ((_a = configIds[name]) !== null && _a !== void 0 ? _a : []).forEach(function (id) {
+	            bundledConfigIds.push(id);
+	        });
+	    });
+	    if ((settings === null || settings === void 0 ? void 0 : settings.addBundledMetadata) !== false) {
+	        json._metadata = tslib_1.__assign(tslib_1.__assign({}, json._metadata), { bundled: bundled.sort(), unbundled: unbundled.sort(), bundledIds: bundledConfigIds });
+	    }
+	    return json;
+	}
+	normalize.normalize = normalize$1;
+	
+	return normalize;
+}
+
 var scheduleFlush = {};
 
 var pWhile = {};
@@ -7213,49 +8063,18 @@ function requireScheduleFlush () {
 	return scheduleFlush;
 }
 
-var clientHints = {};
-
-var hasRequiredClientHints;
-
-function requireClientHints () {
-	if (hasRequiredClientHints) return clientHints;
-	hasRequiredClientHints = 1;
-	Object.defineProperty(clientHints, "__esModule", { value: true });
-	clientHints.clientHints = void 0;
-	var tslib_1 = require$$0$2;
-	function clientHints$1(hints) {
-	    return tslib_1.__awaiter(this, void 0, void 0, function () {
-	        var userAgentData;
-	        return tslib_1.__generator(this, function (_a) {
-	            userAgentData = navigator.userAgentData;
-	            if (!userAgentData)
-	                return [2 /*return*/, undefined];
-	            if (!hints)
-	                return [2 /*return*/, userAgentData.toJSON()];
-	            return [2 /*return*/, userAgentData
-	                    .getHighEntropyValues(hints)
-	                    .catch(function () { return userAgentData.toJSON(); })];
-	        });
-	    });
-	}
-	clientHints.clientHints = clientHints$1;
-	
-	return clientHints;
-}
-
 Object.defineProperty(segmentio$1, "__esModule", { value: true });
 segmentio$1.segmentio = void 0;
-var tslib_1$2 = require$$0$2;
+var tslib_1$1 = require$$0$2;
 var connection_1 = connection;
 var priority_queue_1 = priorityQueue;
 var persisted_1 = persisted$1;
 var to_facade_1 = toFacade$1;
-var batched_dispatcher_1 = tslib_1$2.__importDefault(requireBatchedDispatcher());
-var fetch_dispatcher_1 = tslib_1$2.__importDefault(requireFetchDispatcher());
+var batched_dispatcher_1 = tslib_1$1.__importDefault(requireBatchedDispatcher());
+var fetch_dispatcher_1 = tslib_1$1.__importDefault(requireFetchDispatcher());
 var normalize_1 = requireNormalize();
 var schedule_flush_1 = requireScheduleFlush();
 var constants_1 = requireConstants();
-var client_hints_1 = requireClientHints();
 function onAlias(analytics, json) {
     var _a, _b, _c, _d;
     var user = analytics.user();
@@ -7268,101 +8087,78 @@ function onAlias(analytics, json) {
 }
 function segmentio(analytics, settings, integrations) {
     var _a, _b, _c;
-    return tslib_1$2.__awaiter(this, void 0, void 0, function () {
-        function send(ctx) {
-            return tslib_1$2.__awaiter(this, void 0, void 0, function () {
-                var path, json;
-                return tslib_1$2.__generator(this, function (_a) {
-                    if ((0, connection_1.isOffline)()) {
-                        buffer.push(ctx);
+    // Attach `pagehide` before buffer is created so that inflight events are added
+    // to the buffer before the buffer persists events in its own `pagehide` handler.
+    window.addEventListener('pagehide', function () {
+        buffer.push.apply(buffer, Array.from(inflightEvents));
+        inflightEvents.clear();
+    });
+    var writeKey = (_a = settings === null || settings === void 0 ? void 0 : settings.apiKey) !== null && _a !== void 0 ? _a : '';
+    var buffer = analytics.options.disableClientPersistence
+        ? new priority_queue_1.PriorityQueue(analytics.queue.queue.maxAttempts, [])
+        : new persisted_1.PersistedPriorityQueue(analytics.queue.queue.maxAttempts, "".concat(writeKey, ":dest-Segment.io"));
+    var inflightEvents = new Set();
+    var flushing = false;
+    var apiHost = (_b = settings === null || settings === void 0 ? void 0 : settings.apiHost) !== null && _b !== void 0 ? _b : constants_1.SEGMENT_API_HOST;
+    var protocol = (_c = settings === null || settings === void 0 ? void 0 : settings.protocol) !== null && _c !== void 0 ? _c : 'https';
+    var remote = "".concat(protocol, "://").concat(apiHost);
+    var deliveryStrategy = settings === null || settings === void 0 ? void 0 : settings.deliveryStrategy;
+    var client = (deliveryStrategy === null || deliveryStrategy === void 0 ? void 0 : deliveryStrategy.strategy) === 'batching'
+        ? (0, batched_dispatcher_1.default)(apiHost, deliveryStrategy.config)
+        : (0, fetch_dispatcher_1.default)(deliveryStrategy === null || deliveryStrategy === void 0 ? void 0 : deliveryStrategy.config);
+    function send(ctx) {
+        return tslib_1$1.__awaiter(this, void 0, void 0, function () {
+            var path, json;
+            return tslib_1$1.__generator(this, function (_a) {
+                if ((0, connection_1.isOffline)()) {
+                    buffer.push(ctx);
+                    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+                    (0, schedule_flush_1.scheduleFlush)(flushing, buffer, segmentio, schedule_flush_1.scheduleFlush);
+                    return [2 /*return*/, ctx];
+                }
+                inflightEvents.add(ctx);
+                path = ctx.event.type.charAt(0);
+                json = (0, to_facade_1.toFacade)(ctx.event).json();
+                if (ctx.event.type === 'track') {
+                    delete json.traits;
+                }
+                if (ctx.event.type === 'alias') {
+                    json = onAlias(analytics, json);
+                }
+                return [2 /*return*/, client
+                        .dispatch("".concat(remote, "/").concat(path), (0, normalize_1.normalize)(analytics, json, settings, integrations))
+                        .then(function () { return ctx; })
+                        .catch(function () {
+                        buffer.pushWithBackoff(ctx);
                         // eslint-disable-next-line @typescript-eslint/no-use-before-define
                         (0, schedule_flush_1.scheduleFlush)(flushing, buffer, segmentio, schedule_flush_1.scheduleFlush);
-                        return [2 /*return*/, ctx];
-                    }
-                    inflightEvents.add(ctx);
-                    path = ctx.event.type.charAt(0);
-                    if (userAgentData && ctx.event.context) {
-                        ctx.event.context.userAgentData = userAgentData;
-                    }
-                    json = (0, to_facade_1.toFacade)(ctx.event).json();
-                    if (ctx.event.type === 'track') {
-                        delete json.traits;
-                    }
-                    if (ctx.event.type === 'alias') {
-                        json = onAlias(analytics, json);
-                    }
-                    return [2 /*return*/, client
-                            .dispatch("".concat(remote, "/").concat(path), (0, normalize_1.normalize)(analytics, json, settings, integrations))
-                            .then(function () { return ctx; })
-                            .catch(function () {
-                            buffer.pushWithBackoff(ctx);
-                            // eslint-disable-next-line @typescript-eslint/no-use-before-define
-                            (0, schedule_flush_1.scheduleFlush)(flushing, buffer, segmentio, schedule_flush_1.scheduleFlush);
-                            return ctx;
-                        })
-                            .finally(function () {
-                            inflightEvents.delete(ctx);
-                        })];
-                });
+                        return ctx;
+                    })
+                        .finally(function () {
+                        inflightEvents.delete(ctx);
+                    })];
             });
-        }
-        var writeKey, buffer, inflightEvents, flushing, apiHost, protocol, remote, deliveryStrategy, client, userAgentData, segmentio;
-        return tslib_1$2.__generator(this, function (_e) {
-            switch (_e.label) {
-                case 0:
-                    // Attach `pagehide` before buffer is created so that inflight events are added
-                    // to the buffer before the buffer persists events in its own `pagehide` handler.
-                    window.addEventListener('pagehide', function () {
-                        buffer.push.apply(buffer, Array.from(inflightEvents));
-                        inflightEvents.clear();
-                    });
-                    writeKey = (_a = settings === null || settings === void 0 ? void 0 : settings.apiKey) !== null && _a !== void 0 ? _a : '';
-                    buffer = analytics.options.disableClientPersistence
-                        ? new priority_queue_1.PriorityQueue(analytics.queue.queue.maxAttempts, [])
-                        : new persisted_1.PersistedPriorityQueue(analytics.queue.queue.maxAttempts, "".concat(writeKey, ":dest-Segment.io"));
-                    inflightEvents = new Set();
-                    flushing = false;
-                    apiHost = (_b = settings === null || settings === void 0 ? void 0 : settings.apiHost) !== null && _b !== void 0 ? _b : constants_1.SEGMENT_API_HOST;
-                    protocol = (_c = settings === null || settings === void 0 ? void 0 : settings.protocol) !== null && _c !== void 0 ? _c : 'https';
-                    remote = "".concat(protocol, "://").concat(apiHost);
-                    deliveryStrategy = settings === null || settings === void 0 ? void 0 : settings.deliveryStrategy;
-                    client = (deliveryStrategy === null || deliveryStrategy === void 0 ? void 0 : deliveryStrategy.strategy) === 'batching'
-                        ? (0, batched_dispatcher_1.default)(apiHost, deliveryStrategy.config)
-                        : (0, fetch_dispatcher_1.default)(deliveryStrategy === null || deliveryStrategy === void 0 ? void 0 : deliveryStrategy.config);
-                    _e.label = 1;
-                case 1:
-                    _e.trys.push([1, 3, , 4]);
-                    return [4 /*yield*/, (0, client_hints_1.clientHints)(analytics.options.highEntropyValuesClientHints)];
-                case 2:
-                    userAgentData = _e.sent();
-                    return [3 /*break*/, 4];
-                case 3:
-                    _e.sent();
-                    userAgentData = undefined;
-                    return [3 /*break*/, 4];
-                case 4:
-                    segmentio = {
-                        name: 'Segment.io',
-                        type: 'after',
-                        version: '0.1.0',
-                        isLoaded: function () { return true; },
-                        load: function () { return Promise.resolve(); },
-                        track: send,
-                        identify: send,
-                        page: send,
-                        alias: send,
-                        group: send,
-                        screen: send,
-                    };
-                    // Buffer may already have items if they were previously stored in localStorage.
-                    // Start flushing them immediately.
-                    if (buffer.todo) {
-                        (0, schedule_flush_1.scheduleFlush)(flushing, buffer, segmentio, schedule_flush_1.scheduleFlush);
-                    }
-                    return [2 /*return*/, segmentio];
-            }
         });
-    });
+    }
+    var segmentio = {
+        name: 'Segment.io',
+        type: 'after',
+        version: '0.1.0',
+        isLoaded: function () { return true; },
+        load: function () { return Promise.resolve(); },
+        track: send,
+        identify: send,
+        page: send,
+        alias: send,
+        group: send,
+        screen: send,
+    };
+    // Buffer may already have items if they were previously stored in localStorage.
+    // Start flushing them immediately.
+    if (buffer.todo) {
+        (0, schedule_flush_1.scheduleFlush)(flushing, buffer, segmentio, schedule_flush_1.scheduleFlush);
+    }
+    return segmentio;
 }
 segmentio$1.segmentio = segmentio;
 
@@ -7399,291 +8195,6 @@ validation.validation = {
     group: validate,
     screen: validate,
 };
-
-var buffer = {};
-
-var isThenable$1 = {};
-
-Object.defineProperty(isThenable$1, "__esModule", { value: true });
-isThenable$1.isThenable = void 0;
-/**
- *  Check if  thenable
- *  (instanceof Promise doesn't respect realms)
- */
-var isThenable = function (value) {
-    return typeof value === 'object' &&
-        value !== null &&
-        'then' in value &&
-        typeof value.then === 'function';
-};
-isThenable$1.isThenable = isThenable;
-
-Object.defineProperty(buffer, "__esModule", { value: true });
-buffer.AnalyticsBuffered = buffer.callAnalyticsMethod = buffer.PreInitMethodCallBuffer = buffer.flushAnalyticsCallsInNewTask = buffer.flushSetAnonymousID = buffer.flushOn = buffer.flushAddSourceMiddleware = void 0;
-var tslib_1$1 = require$$0$2;
-var is_thenable_1 = isThenable$1;
-var version_1 = version;
-var flushSyncAnalyticsCalls = function (name, analytics, buffer) {
-    buffer.getCalls(name).forEach(function (c) {
-        // While the underlying methods are synchronous, the callAnalyticsMethod returns a promise,
-        // which normalizes success and error states between async and non-async methods, with no perf penalty.
-        callAnalyticsMethod(analytics, c).catch(console.error);
-    });
-};
-var flushAddSourceMiddleware = function (analytics, buffer) { return tslib_1$1.__awaiter(void 0, void 0, void 0, function () {
-    var _i, _a, c;
-    return tslib_1$1.__generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _i = 0, _a = buffer.getCalls('addSourceMiddleware');
-                _b.label = 1;
-            case 1:
-                if (!(_i < _a.length)) return [3 /*break*/, 4];
-                c = _a[_i];
-                return [4 /*yield*/, callAnalyticsMethod(analytics, c).catch(console.error)];
-            case 2:
-                _b.sent();
-                _b.label = 3;
-            case 3:
-                _i++;
-                return [3 /*break*/, 1];
-            case 4: return [2 /*return*/];
-        }
-    });
-}); };
-buffer.flushAddSourceMiddleware = flushAddSourceMiddleware;
-buffer.flushOn = flushSyncAnalyticsCalls.bind(commonjsGlobal, 'on');
-buffer.flushSetAnonymousID = flushSyncAnalyticsCalls.bind(commonjsGlobal, 'setAnonymousId');
-var flushAnalyticsCallsInNewTask = function (analytics, buffer) {
-    buffer.toArray().forEach(function (m) {
-        setTimeout(function () {
-            callAnalyticsMethod(analytics, m).catch(console.error);
-        }, 0);
-    });
-};
-buffer.flushAnalyticsCallsInNewTask = flushAnalyticsCallsInNewTask;
-/**
- *  Represents any and all the buffered method calls that occurred before initialization.
- */
-var PreInitMethodCallBuffer = /** @class */ (function () {
-    function PreInitMethodCallBuffer() {
-        this._value = {};
-    }
-    PreInitMethodCallBuffer.prototype.toArray = function () {
-        var _a;
-        return (_a = []).concat.apply(_a, Object.values(this._value));
-    };
-    PreInitMethodCallBuffer.prototype.getCalls = function (methodName) {
-        var _a;
-        return ((_a = this._value[methodName]) !== null && _a !== void 0 ? _a : []);
-    };
-    PreInitMethodCallBuffer.prototype.push = function () {
-        var _this = this;
-        var calls = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            calls[_i] = arguments[_i];
-        }
-        calls.forEach(function (call) {
-            if (_this._value[call.method]) {
-                _this._value[call.method].push(call);
-            }
-            else {
-                _this._value[call.method] = [call];
-            }
-        });
-        return this;
-    };
-    PreInitMethodCallBuffer.prototype.clear = function () {
-        this._value = {};
-        return this;
-    };
-    return PreInitMethodCallBuffer;
-}());
-buffer.PreInitMethodCallBuffer = PreInitMethodCallBuffer;
-/**
- *  Call method and mark as "called"
- *  This function should never throw an error
- */
-function callAnalyticsMethod(analytics, call) {
-    return tslib_1$1.__awaiter(this, void 0, void 0, function () {
-        var result, err_1;
-        return tslib_1$1.__generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    _a.trys.push([0, 3, , 4]);
-                    if (call.called) {
-                        return [2 /*return*/, undefined];
-                    }
-                    call.called = true;
-                    result = analytics[call.method].apply(analytics, call.args);
-                    if (!(0, is_thenable_1.isThenable)(result)) return [3 /*break*/, 2];
-                    // do not defer for non-async methods
-                    return [4 /*yield*/, result];
-                case 1:
-                    // do not defer for non-async methods
-                    _a.sent();
-                    _a.label = 2;
-                case 2:
-                    call.resolve(result);
-                    return [3 /*break*/, 4];
-                case 3:
-                    err_1 = _a.sent();
-                    call.reject(err_1);
-                    return [3 /*break*/, 4];
-                case 4: return [2 /*return*/];
-            }
-        });
-    });
-}
-buffer.callAnalyticsMethod = callAnalyticsMethod;
-var AnalyticsBuffered = /** @class */ (function () {
-    function AnalyticsBuffered(loader) {
-        var _this = this;
-        this._preInitBuffer = new PreInitMethodCallBuffer();
-        this.trackSubmit = this._createMethod('trackSubmit');
-        this.trackClick = this._createMethod('trackClick');
-        this.trackLink = this._createMethod('trackLink');
-        this.pageView = this._createMethod('pageview');
-        this.identify = this._createMethod('identify');
-        this.reset = this._createMethod('reset');
-        this.group = this._createMethod('group');
-        this.track = this._createMethod('track');
-        this.ready = this._createMethod('ready');
-        this.alias = this._createMethod('alias');
-        this.debug = this._createChainableMethod('debug');
-        this.page = this._createMethod('page');
-        this.once = this._createChainableMethod('once');
-        this.off = this._createChainableMethod('off');
-        this.on = this._createChainableMethod('on');
-        this.addSourceMiddleware = this._createMethod('addSourceMiddleware');
-        this.setAnonymousId = this._createMethod('setAnonymousId');
-        this.addDestinationMiddleware = this._createMethod('addDestinationMiddleware');
-        this.screen = this._createMethod('screen');
-        this.register = this._createMethod('register');
-        this.deregister = this._createMethod('deregister');
-        this.user = this._createMethod('user');
-        this.VERSION = version_1.version;
-        this._promise = loader(this._preInitBuffer);
-        this._promise
-            .then(function (_a) {
-            var ajs = _a[0], ctx = _a[1];
-            _this.instance = ajs;
-            _this.ctx = ctx;
-        })
-            .catch(function () {
-            // intentionally do nothing...
-            // this result of this promise will be caught by the 'catch' block on this class.
-        });
-    }
-    AnalyticsBuffered.prototype.then = function () {
-        var _a;
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        return (_a = this._promise).then.apply(_a, args);
-    };
-    AnalyticsBuffered.prototype.catch = function () {
-        var _a;
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        return (_a = this._promise).catch.apply(_a, args);
-    };
-    AnalyticsBuffered.prototype.finally = function () {
-        var _a;
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        return (_a = this._promise).finally.apply(_a, args);
-    };
-    AnalyticsBuffered.prototype._createMethod = function (methodName) {
-        var _this = this;
-        return function () {
-            var _a;
-            var args = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i] = arguments[_i];
-            }
-            if (_this.instance) {
-                var result = (_a = _this.instance)[methodName].apply(_a, args);
-                return Promise.resolve(result);
-            }
-            return new Promise(function (resolve, reject) {
-                _this._preInitBuffer.push({
-                    method: methodName,
-                    args: args,
-                    resolve: resolve,
-                    reject: reject,
-                    called: false,
-                });
-            });
-        };
-    };
-    /**
-     *  These are for methods that where determining when the method gets "flushed" is not important.
-     *  These methods will resolve when analytics is fully initialized, and return type (other than Analytics)will not be available.
-     */
-    AnalyticsBuffered.prototype._createChainableMethod = function (methodName) {
-        var _this = this;
-        return function () {
-            var _a;
-            var args = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i] = arguments[_i];
-            }
-            if (_this.instance) {
-                void (_a = _this.instance)[methodName].apply(_a, args);
-                return _this;
-            }
-            else {
-                _this._preInitBuffer.push({
-                    method: methodName,
-                    args: args,
-                    resolve: function () { },
-                    reject: console.error,
-                    called: false,
-                });
-            }
-            return _this;
-        };
-    };
-    return AnalyticsBuffered;
-}());
-buffer.AnalyticsBuffered = AnalyticsBuffered;
-
-var snippet = {};
-
-Object.defineProperty(snippet, "__esModule", { value: true });
-snippet.popSnippetWindowBuffer = snippet.transformSnippetCall = void 0;
-function transformSnippetCall(_a) {
-    var methodName = _a[0], args = _a.slice(1);
-    return {
-        method: methodName,
-        resolve: function () { },
-        reject: console.error,
-        args: args,
-        called: false,
-    };
-}
-snippet.transformSnippetCall = transformSnippetCall;
-var normalizeSnippetBuffer = function (buffer) {
-    return buffer.map(transformSnippetCall);
-};
-/**
- * Fetch the buffered method calls from the window object and normalize them.
- * This removes existing buffered calls from the window object.
- */
-var popSnippetWindowBuffer = function () {
-    var wa = window.analytics;
-    if (!Array.isArray(wa))
-        return [];
-    var buffered = wa.splice(0, wa.length);
-    return normalizeSnippetBuffer(buffered);
-};
-snippet.popSnippetWindowBuffer = popSnippetWindowBuffer;
 
 var inspector = {};
 
@@ -14412,6 +14923,7 @@ function requireAjsDestination () {
 	var loader_1 = requireLoader();
 	var analytics_core_2 = require$$5;
 	var utils_1 = requireUtils();
+	var metric_helpers_1 = metricHelpers;
 	function flushQueue(xt, queue) {
 	    return tslib_1.__awaiter(this, void 0, void 0, function () {
 	        var failedQueue;
@@ -14522,17 +15034,20 @@ function requireAjsDestination () {
 	                            _this.integration.on('initialize', onInit);
 	                        });
 	                        try {
-	                            ctx.stats.increment('analytics_js.integration.invoke', 1, [
-	                                "method:initialize",
-	                                "integration_name:".concat(this.name),
-	                            ]);
+	                            (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+	                                integrationName: this.name,
+	                                methodName: 'initialize',
+	                                type: 'classic',
+	                            });
 	                            this.integration.initialize();
 	                        }
 	                        catch (error) {
-	                            ctx.stats.increment('analytics_js.integration.invoke.error', 1, [
-	                                "method:initialize",
-	                                "integration_name:".concat(this.name),
-	                            ]);
+	                            (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+	                                integrationName: this.name,
+	                                methodName: 'initialize',
+	                                type: 'classic',
+	                                didError: true,
+	                            });
 	                            throw error;
 	                        }
 	                        return [2 /*return*/];
@@ -14603,10 +15118,11 @@ function requireAjsDestination () {
 	                        event = new clz(afterMiddleware, {
 	                            traverse: !this.disableAutoISOConversion,
 	                        });
-	                        ctx.stats.increment('analytics_js.integration.invoke', 1, [
-	                            "method:".concat(eventType),
-	                            "integration_name:".concat(this.name),
-	                        ]);
+	                        (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+	                            integrationName: this.name,
+	                            methodName: eventType,
+	                            type: 'classic',
+	                        });
 	                        _c.label = 2;
 	                    case 2:
 	                        _c.trys.push([2, 5, , 6]);
@@ -14618,10 +15134,12 @@ function requireAjsDestination () {
 	                    case 4: return [3 /*break*/, 6];
 	                    case 5:
 	                        err_1 = _c.sent();
-	                        ctx.stats.increment('analytics_js.integration.invoke.error', 1, [
-	                            "method:".concat(eventType),
-	                            "integration_name:".concat(this.name),
-	                        ]);
+	                        (0, metric_helpers_1.recordIntegrationMetric)(ctx, {
+	                            integrationName: this.name,
+	                            methodName: eventType,
+	                            type: 'classic',
+	                            didError: true,
+	                        });
 	                        throw err_1;
 	                    case 6: return [2 /*return*/, ctx];
 	                }
@@ -14949,16 +15467,17 @@ var get_process_env_1 = getProcessEnv$1;
 var parse_cdn_1 = parseCdn;
 var fetch_1 = fetch$2;
 var analytics_1 = analytics;
+var context_1 = context;
 var merged_options_1 = mergedOptions$1;
-var create_deferred_1 = createDeferred$1;
-var page_enrichment_1 = pageEnrichment;
+var analytics_generic_utils_1 = require$$7;
+var env_enrichment_1 = envEnrichment;
 var remote_loader_1 = remoteLoader$1;
 var segmentio_1 = segmentio$1;
 var validation_1 = validation;
 var buffer_1 = buffer;
-var snippet_1 = snippet;
 var inspector_1 = inspector;
 var stats_1 = stats;
+var global_analytics_helper_1 = globalAnalyticsHelper;
 function loadLegacySettings(writeKey, cdnURL) {
     var baseUrl = cdnURL !== null && cdnURL !== void 0 ? cdnURL : (0, parse_cdn_1.getCDN)();
     return (0, fetch_1.fetch)("".concat(baseUrl, "/v1/projects/").concat(writeKey, "/settings"))
@@ -14995,7 +15514,6 @@ function hasTsubMiddleware(settings) {
  * This is important so users can register to 'initialize' and any events that may fire early during setup.
  */
 function flushPreBuffer(analytics, buffer) {
-    buffer.push.apply(buffer, (0, snippet_1.popSnippetWindowBuffer)());
     (0, buffer_1.flushSetAnonymousID)(analytics, buffer);
     (0, buffer_1.flushOn)(analytics, buffer);
 }
@@ -15006,14 +15524,14 @@ function flushFinalBuffer(analytics, buffer) {
     return tslib_1.__awaiter(this, void 0, void 0, function () {
         return tslib_1.__generator(this, function (_a) {
             switch (_a.label) {
-                case 0:
+                case 0: 
+                // Call popSnippetWindowBuffer before each flush task since there may be
+                // analytics calls during async function calls.
+                return [4 /*yield*/, (0, buffer_1.flushAddSourceMiddleware)(analytics, buffer)];
+                case 1:
                     // Call popSnippetWindowBuffer before each flush task since there may be
                     // analytics calls during async function calls.
-                    buffer.push.apply(buffer, (0, snippet_1.popSnippetWindowBuffer)());
-                    return [4 /*yield*/, (0, buffer_1.flushAddSourceMiddleware)(analytics, buffer)];
-                case 1:
                     _a.sent();
-                    buffer.push.apply(buffer, (0, snippet_1.popSnippetWindowBuffer)());
                     (0, buffer_1.flushAnalyticsCallsInNewTask)(analytics, buffer);
                     // Clear buffer, just in case analytics is loaded twice; we don't want to fire events off again.
                     buffer.clear();
@@ -15022,14 +15540,20 @@ function flushFinalBuffer(analytics, buffer) {
         });
     });
 }
-function registerPlugins(writeKey, legacySettings, analytics, opts, options, plugins, legacyIntegrationSources) {
+function registerPlugins(writeKey, legacySettings, analytics, opts, options, pluginLikes, legacyIntegrationSources) {
     var _a, _b, _c;
+    if (pluginLikes === void 0) { pluginLikes = []; }
     return tslib_1.__awaiter(this, void 0, void 0, function () {
-        var tsubMiddleware, _d, legacyDestinations, _e, schemaFilter, _f, mergedSettings, remotePlugins, toRegister, shouldIgnoreSegmentio, _g, _h, ctx;
+        var plugins, pluginSources, tsubMiddleware, _d, legacyDestinations, _e, schemaFilter, _f, mergedSettings, remotePlugins, toRegister, shouldIgnoreSegmentio, _g, _h, ctx;
         var _this = this;
         return tslib_1.__generator(this, function (_j) {
             switch (_j.label) {
                 case 0:
+                    plugins = pluginLikes === null || pluginLikes === void 0 ? void 0 : pluginLikes.filter(function (pluginLike) { return typeof pluginLike === 'object'; });
+                    pluginSources = pluginLikes === null || pluginLikes === void 0 ? void 0 : pluginLikes.filter(function (pluginLike) {
+                        return typeof pluginLike === 'function' &&
+                            typeof pluginLike.pluginName === 'string';
+                    });
                     if (!hasTsubMiddleware(legacySettings)) return [3 /*break*/, 2];
                     return [4 /*yield*/, Promise.resolve().then(function () { return tslib_1.__importStar(requireRoutingMiddleware()); }).then(function (mod) {
                             return mod.tsubMiddleware(legacySettings.middlewareSettings.routingRules);
@@ -15076,12 +15600,12 @@ function registerPlugins(writeKey, legacySettings, analytics, opts, options, plu
                 case 11:
                     schemaFilter = _f;
                     mergedSettings = (0, merged_options_1.mergedOptions)(legacySettings, options);
-                    return [4 /*yield*/, (0, remote_loader_1.remoteLoader)(legacySettings, analytics.integrations, mergedSettings, options.obfuscate, tsubMiddleware).catch(function () { return []; })];
+                    return [4 /*yield*/, (0, remote_loader_1.remoteLoader)(legacySettings, analytics.integrations, mergedSettings, options.obfuscate, tsubMiddleware, pluginSources).catch(function () { return []; })];
                 case 12:
                     remotePlugins = _j.sent();
                     toRegister = tslib_1.__spreadArray(tslib_1.__spreadArray(tslib_1.__spreadArray([
                         validation_1.validation,
-                        page_enrichment_1.pageEnrichment
+                        env_enrichment_1.envEnrichment
                     ], plugins, true), legacyDestinations, true), remotePlugins, true);
                     if (schemaFilter) {
                         toRegister.push(schemaFilter);
@@ -15130,10 +15654,16 @@ function loadAnalytics(settings, options, preInitBuffer) {
     var _a, _b, _c, _d, _e, _f, _g;
     if (options === void 0) { options = {}; }
     return tslib_1.__awaiter(this, void 0, void 0, function () {
-        var legacySettings, _h, retryQueue, opts, analytics, plugins, classicIntegrations, ctx, search, hash, term;
+        var legacySettings, _h, disabled, retryQueue, opts, analytics, plugins, classicIntegrations, ctx, search, hash, term;
         return tslib_1.__generator(this, function (_j) {
             switch (_j.label) {
                 case 0:
+                    // return no-op analytics instance if disabled
+                    if (options.disable === true) {
+                        return [2 /*return*/, [new analytics_1.NullAnalytics(), context_1.Context.system()]];
+                    }
+                    if (options.globalAnalyticsKey)
+                        (0, global_analytics_helper_1.setGlobalAnalyticsKey)(options.globalAnalyticsKey);
                     // this is an ugly side-effect, but it's for the benefits of the plugins that get their cdn via getCDN()
                     if (settings.cdnURL)
                         (0, parse_cdn_1.setGlobalCDNUrl)(settings.cdnURL);
@@ -15149,6 +15679,15 @@ function loadAnalytics(settings, options, preInitBuffer) {
                     if (options.updateCDNSettings) {
                         legacySettings = options.updateCDNSettings(legacySettings);
                     }
+                    if (!(typeof options.disable === 'function')) return [3 /*break*/, 5];
+                    return [4 /*yield*/, options.disable(legacySettings)];
+                case 4:
+                    disabled = _j.sent();
+                    if (disabled) {
+                        return [2 /*return*/, [new analytics_1.NullAnalytics(), context_1.Context.system()]];
+                    }
+                    _j.label = 5;
+                case 5:
                     retryQueue = (_c = (_b = legacySettings.integrations['Segment.io']) === null || _b === void 0 ? void 0 : _b.retryQueue) !== null && _c !== void 0 ? _c : true;
                     opts = tslib_1.__assign({ retryQueue: retryQueue }, options);
                     analytics = new analytics_1.Analytics(settings, opts);
@@ -15159,24 +15698,24 @@ function loadAnalytics(settings, options, preInitBuffer) {
                     // needs to be flushed before plugins are registered
                     flushPreBuffer(analytics, preInitBuffer);
                     return [4 /*yield*/, registerPlugins(settings.writeKey, legacySettings, analytics, opts, options, plugins, classicIntegrations)];
-                case 4:
+                case 6:
                     ctx = _j.sent();
                     search = (_f = window.location.search) !== null && _f !== void 0 ? _f : '';
                     hash = (_g = window.location.hash) !== null && _g !== void 0 ? _g : '';
                     term = search.length ? search : hash.replace(/(?=#).*(?=\?)/, '');
-                    if (!term.includes('ajs_')) return [3 /*break*/, 6];
+                    if (!term.includes('ajs_')) return [3 /*break*/, 8];
                     return [4 /*yield*/, analytics.queryString(term).catch(console.error)];
-                case 5:
+                case 7:
                     _j.sent();
-                    _j.label = 6;
-                case 6:
+                    _j.label = 8;
+                case 8:
                     analytics.initialized = true;
                     analytics.emit('initialize', settings, options);
                     if (options.initialPageview) {
                         analytics.page().catch(console.error);
                     }
                     return [4 /*yield*/, flushFinalBuffer(analytics, preInitBuffer)];
-                case 7:
+                case 9:
                     _j.sent();
                     return [2 /*return*/, [analytics, ctx]];
             }
@@ -15197,7 +15736,7 @@ var AnalyticsBrowser = /** @class */ (function (_super) {
     tslib_1.__extends(AnalyticsBrowser, _super);
     function AnalyticsBrowser() {
         var _this = this;
-        var _a = (0, create_deferred_1.createDeferred)(), loadStart = _a.promise, resolveLoadStart = _a.resolve;
+        var _a = (0, analytics_generic_utils_1.createDeferred)(), loadStart = _a.promise, resolveLoadStart = _a.resolve;
         _this = _super.call(this, function (buffer) {
             return loadStart.then(function (_a) {
                 var settings = _a[0], options = _a[1];
