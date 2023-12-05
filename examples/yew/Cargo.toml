@@ -23,6 +23,8 @@ yew = { version = "0.20", features = ["csr"] }
 analytics-next = { path = "../.." }
 analytics-next-sys = { path = "../../analytics-next-sys" }
 
+[workspace]
+
 [dependencies.web-sys]
 version = "0.3"
 features = [
