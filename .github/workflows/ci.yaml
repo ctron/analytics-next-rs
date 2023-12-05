@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install wasm32 target
+        run: |
+          rustup toolchain install stable --target wasm32-unknown-unknown
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Check rustfmt
+        run:
+          cargo fmt --all -- --check
+
+      - name: Check
+        run: |
+          cargo check --target wasm32-unknown-unknown
+
+      - name: Clippy
+        run: cargo clippy --target wasm32-unknown-unknown --all-targets --tests --bins --all -- -D warnings
+
+      - name: Check examples
+        run: |
+          cargo check --target wasm32-unknown-unknown --manifest-path examples/yew/Cargo.toml
+
+      - name: Test
+        run: |
+          cargo test # need to run this as non-wasm32
