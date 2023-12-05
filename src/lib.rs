@@ -49,6 +49,16 @@ impl From<String> for TrackingEvent<'static> {
     }
 }
 
+impl From<(std::string::String, Value)> for TrackingEvent<'static> {
+    fn from((event, payload): (String, Value)) -> Self {
+        TrackingEvent {
+            event: event.into(),
+            payload: Some(payload),
+            options: None,
+        }
+    }
+}
+
 impl<'a> From<(&'a str, Value)> for TrackingEvent<'a> {
     fn from((event, payload): (&'a str, Value)) -> Self {
         TrackingEvent {
