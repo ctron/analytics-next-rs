@@ -32,5 +32,4 @@ version = "0.3"
 all-features = true
 
 [workspace.metadata.release]
-tag = false
 tag-name = "v{{version}}"
