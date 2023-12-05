@@ -41,6 +41,7 @@ jobs:
 
       - name: Check examples
         run: |
+          touch examples/yew/src/writekey.txt # provide mock write key for compilation
           cargo check --target wasm32-unknown-unknown --manifest-path examples/yew/Cargo.toml
 
       - name: Test

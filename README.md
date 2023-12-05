@@ -4,3 +4,13 @@
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/tag/ctron/analytics-next-rs?sort=semver)](https://github.com/ctron/analytics-next-rs/releases)
 [![crates.io](https://img.shields.io/crates/v/analytics-next.svg)](https://crates.io/crates/analytics-next)
 [![docs.rs](https://docs.rs/analytics-next/badge.svg)](https://docs.rs/analytics-next)
+
+## Example
+
+For running the example, you need to provide a Segment.io *writekey*. Place it into the file
+`examples/yew/src/writekey.txt` and then start serve the example:
+
+```
+cd examples/yew
+trunk serve
+```
