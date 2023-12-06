@@ -1,5 +1,6 @@
 pub use analytics_next_sys as sys;
 use gloo_utils::format::JsValueSerdeExt;
+use js_sys::{Object, Reflect};
 use serde_json::Value;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -17,10 +18,17 @@ impl PartialEq for AnalyticsBrowser {
     }
 }
 
-#[wasm_bindgen(getter_with_clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Settings {
-    #[wasm_bindgen(js_name = "writeKey")]
     pub write_key: String,
+}
+
+impl From<Settings> for JsValue {
+    fn from(value: Settings) -> Self {
+        let result = Object::new();
+        let _ = Reflect::set(&result, &"writeKey".into(), &value.write_key.into());
+        result.into()
+    }
 }
 
 pub struct TrackingEvent<'a> {
