@@ -7,6 +7,18 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
+/// A macro to turn a [`serde::Serialize`] into a [`TrackingEvent`].
+///
+/// ## Example
+///
+/// ```rust
+/// # use analytics_next_macro::tracking;
+/// #[derive(serde::Serialize)]
+/// #[tracking("My event")]
+/// struct MyEvent {}
+/// ```
+pub use analytics_next_macro::tracking;
+
 #[derive(Clone)]
 pub struct AnalyticsBrowser {
     pub instance: Rc<sys::AnalyticsBrowser>,
@@ -58,7 +70,7 @@ impl From<String> for TrackingEvent<'static> {
     }
 }
 
-impl From<(std::string::String, Value)> for TrackingEvent<'static> {
+impl From<(String, Value)> for TrackingEvent<'static> {
     fn from((event, payload): (String, Value)) -> Self {
         TrackingEvent {
             event: event.into(),
