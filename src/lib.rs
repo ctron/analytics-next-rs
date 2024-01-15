@@ -31,6 +31,7 @@ impl From<Settings> for JsValue {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TrackingEvent<'a> {
     pub event: Cow<'a, str>,
     pub payload: Option<Value>,
