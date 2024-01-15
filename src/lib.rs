@@ -19,6 +19,7 @@ use wasm_bindgen::prelude::*;
 /// ```
 pub use analytics_next_macro::tracking;
 
+/// The analytics client instance
 #[derive(Clone)]
 pub struct AnalyticsBrowser {
     pub instance: Rc<sys::AnalyticsBrowser>,
@@ -30,6 +31,7 @@ impl PartialEq for AnalyticsBrowser {
     }
 }
 
+/// The client settings
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Settings {
     pub write_key: String,
@@ -43,10 +45,14 @@ impl From<Settings> for JsValue {
     }
 }
 
+/// A tracking event
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TrackingEvent<'a> {
+    /// The name of the event
     pub event: Cow<'a, str>,
+    /// The event payload
     pub payload: Option<Value>,
+    /// Additional options
     pub options: Option<Value>,
 }
 
@@ -100,18 +106,24 @@ impl<'a> From<(&'a str, Option<Value>)> for TrackingEvent<'a> {
     }
 }
 
+/// A user
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct User {
+    /// The ID of the user, [`None`] if it isn't known
     pub id: Option<String>,
+    /// User traits
     pub traits: Value,
+    /// Additional options
     pub options: Value,
 }
 
 impl AnalyticsBrowser {
+    /// Load a default instance
     pub fn load(settings: Settings) -> Self {
         Self::load_with_options(settings, JsValue::UNDEFINED)
     }
 
+    /// Load with custom options
     pub fn load_with_options(settings: Settings, options: JsValue) -> Self {
         let instance = sys::AnalyticsBrowser::new();
         instance.load(settings.into(), options);
@@ -120,6 +132,7 @@ impl AnalyticsBrowser {
         }
     }
 
+    /// Identify the current session
     pub fn identify(&self, user: impl Into<User>) {
         let user = user.into();
         let id = user.id.as_deref();
@@ -129,6 +142,7 @@ impl AnalyticsBrowser {
         self.instance.identify(id, traits, options);
     }
 
+    /// Track an event
     pub fn track<'a>(&self, event: impl Into<TrackingEvent<'a>>) {
         let event = event.into();
 
@@ -156,6 +170,7 @@ impl AnalyticsBrowser {
         }
     }
 
+    /// Track the current page
     pub fn page(&self) {
         self.instance.page();
     }
